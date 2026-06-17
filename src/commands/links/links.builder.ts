@@ -1,8 +1,7 @@
+import { discordLocalizations, t } from "@/utils/i18n";
 import { SlashCommandBuilder } from "discord.js";
 
 export const slashCommand = new SlashCommandBuilder()
   .setName("links")
-  .setDescription("Show useful Nowly links")
-  .setDescriptionLocalizations({
-    fr: "Affiche les liens utiles de Nowly",
-  });
+  .setDescription(t("en", "commands.links.description"))
+  .setDescriptionLocalizations(discordLocalizations("commands.links.description"));
