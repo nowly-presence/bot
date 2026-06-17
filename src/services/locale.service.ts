@@ -1,7 +1,7 @@
+import { Locale } from "@/types/locale";
+import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
-import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
-import { Locale } from "@/types/locale";
 
 type LocaleStore = {
   guilds: Record<string, Locale>;
@@ -10,10 +10,12 @@ type LocaleStore = {
 
 class LocaleServiceClass {
   private readonly filePath = join(process.cwd(), ".data", "locales.json");
+
   private readonly store: LocaleStore = {
     guilds: {},
     users: {},
   };
+
   private loaded = false;
 
   load = async (): Promise<void> => {
@@ -51,7 +53,9 @@ class LocaleServiceClass {
       return userLocale;
     }
 
-    return interaction.locale?.startsWith("fr") ? "fr" : "en";
+    if (interaction.locale?.startsWith("fr")) return "fr";
+    if (interaction.locale?.startsWith("es")) return "es";
+    return "en";
   };
 
   canManageGuildLocale = (interaction: ChatInputCommandInteraction): boolean => {
@@ -75,7 +79,7 @@ class LocaleServiceClass {
 
   private cleanLocales = (locales: Record<string, Locale>): Record<string, Locale> => {
     return Object.fromEntries(
-      Object.entries(locales).filter(([, locale]) => locale === "en" || locale === "fr"),
+      Object.entries(locales).filter(([, locale]) => locale === "en" || locale === "fr" || locale === "es"),
     );
   };
 }

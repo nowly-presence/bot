@@ -1,12 +1,12 @@
-import { CommandExecute, AutocompleteExecute } from "@/utils/handler/command";
-import { NowlyApiService, PresenceMetadata, PresenceSummary } from "@/services/nowly-api.service";
+import { env } from "@/config/env";
 import { LocaleService } from "@/services/locale.service";
+import { NowlyApiService, PresenceMetadata, PresenceSummary } from "@/services/nowly-api.service";
+import { Locale } from "@/types/locale";
 import { createLinkButton, createLinkRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
 import { formatNumber, formatRating, normalizeSlug, truncate } from "@/utils/format";
+import { AutocompleteExecute, CommandExecute } from "@/utils/handler/command";
 import { t } from "@/utils/i18n";
-import { env } from "@/config/env";
-import { Locale } from "@/types/locale";
 
 export const autocomplete: AutocompleteExecute = async (interaction) => {
   const focused = interaction.options.getFocused().toLowerCase();
@@ -38,6 +38,7 @@ export const execute: CommandExecute = async (command) => {
       content: t(locale, "presenceNotFound", { query }),
       flags: ["Ephemeral"],
     });
+
     return;
   }
 
@@ -45,6 +46,7 @@ export const execute: CommandExecute = async (command) => {
   const presence = getPresenceMetadata(release ?? match);
   const appUrl = `${env.NOWLY_APP_BASE_URL}/presences/${presence.slug}`;
   const description = getLocalizedDescription(presence.description, locale);
+
   const embed = createNowlyEmbed(
     presence.name ?? presence.slug,
     description ? truncate(description, 350) : t(locale, "presenceNoDescription"),
@@ -84,19 +86,11 @@ export const execute: CommandExecute = async (command) => {
   const logoUrl = getPresenceAssetUrl(presence.slug, "logo", presence.assets?.logo);
   const bannerUrl = getPresenceAssetUrl(presence.slug, "thumbnail", presence.assets?.thumbnail);
 
-  if (logoUrl) {
-    embed.setThumbnail(logoUrl);
-  }
-
-  if (bannerUrl) {
-    embed.setImage(bannerUrl);
-  }
+  if (logoUrl) embed.setThumbnail(logoUrl);
+  if (bannerUrl) embed.setImage(bannerUrl);
 
   const author = getAuthorName(presence.author);
-
-  if (author) {
-    embed.setFooter({ text: t(locale, "presenceFooter", { author }) });
-  }
+  if (author) embed.setFooter({ text: t(locale, "presenceFooter", { author }) });
 
   await command.reply({
     embeds: [embed],
@@ -110,9 +104,7 @@ export const execute: CommandExecute = async (command) => {
 };
 
 const searchPresences = (presences: PresenceSummary[], query: string): PresenceSummary[] => {
-  if (!query) {
-    return presences;
-  }
+  if (!query) return presences;
 
   return presences.filter((presence) => {
     const name = presence.name?.toLowerCase() ?? "";
@@ -176,8 +168,14 @@ const getLocalizedDescription = (
   }
 
   return description[locale]
-    ?? description[locale === "fr" ? "fr-FR" : "en-US"]
+    ?? description[getDiscordLocale(locale)]
     ?? description["en-US"]
     ?? description.en
     ?? Object.values(description)[0];
+};
+
+const getDiscordLocale = (locale: Locale): string => {
+  if (locale === "fr") return "fr-FR";
+  if (locale === "es") return "es-ES";
+  return "en-US";
 };
