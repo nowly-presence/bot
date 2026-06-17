@@ -30,6 +30,10 @@ src/
   client.ts
   events/
     ready.event.ts
+  locales/
+    en.json
+    fr.json
+    es.json
   commands/
     presence/
       presence.builder.ts
@@ -53,6 +57,8 @@ src/
 ```
 
 Commands are discovered by folder convention: each `commands/<name>` folder must contain `<name>.builder.ts` and `<name>.command.ts`.
+
+Bot messages and Discord command localizations live in `src/locales/<locale>.json`.
 
 ## Commands
 
