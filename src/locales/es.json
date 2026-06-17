@@ -1,0 +1,90 @@
+{
+  "genericError": "Ha ocurrido un error.",
+  "unknown": "Desconocido",
+  "presenceNotFound": "No se encontró ninguna presencia de Nowly para `{query}`.",
+  "presenceNoDescription": "No hay descripción disponible.",
+  "presenceFooter": "Por {author}",
+  "openPresence": "Abrir presencia",
+  "openLibrary": "Abrir biblioteca",
+  "openStatus": "Abrir estado",
+  "supportTitle": "Soporte de Nowly",
+  "supportDescription": "¿Necesitas ayuda con Nowly, la extensión o una presencia? Abre la página de soporte y añade todo el contexto posible.",
+  "openSupport": "Abrir soporte",
+  "linksTitle": "Enlaces de Nowly",
+  "linksDescription": "Páginas útiles de Nowly.",
+  "website": "Sitio web",
+  "statusTitle": "Estado de Nowly",
+  "statusServiceLine": "{status}\nHTTP {httpStatus} - {responseMs}",
+  "langGuildOnly": "El idioma del servidor solo puede cambiarse dentro de un servidor.",
+  "langMissingPermission": "Necesitas el permiso « Gestionar servidor » para cambiar el idioma del servidor.",
+  "langGuildUpdated": "El idioma del servidor ahora es español.",
+  "langUserUpdated": "Tu idioma ahora es español.",
+  "statusStates": {
+    "operational": "Operativo",
+    "slow": "Lento",
+    "degraded": "Degradado",
+    "down": "No disponible",
+    "unknown": "Desconocido"
+  },
+  "statusOverall": {
+    "operational": "Todos los servicios monitorizados están operativos.",
+    "slow": "Algunos servicios van más lentos de lo habitual.",
+    "degraded": "Algunos servicios están degradados.",
+    "down": "Al menos un servicio monitorizado no está disponible.",
+    "unknown": "No hay una muestra de estado reciente disponible."
+  },
+  "services": {
+    "website": "Sitio web",
+    "api": "API",
+    "library": "Biblioteca",
+    "cdn": "CDN"
+  },
+  "presenceFields": {
+    "slug": "Identificador",
+    "version": "Versión",
+    "category": "Categoría",
+    "installs": "Instalaciones",
+    "activeUsers": "Usuarios activos",
+    "rating": "Valoración"
+  },
+  "commands": {
+    "presence": {
+      "description": "Muestra los detalles de una presencia de Nowly",
+      "options": {
+        "query": {
+          "name": "busqueda",
+          "description": "Nombre o identificador de la presencia"
+        }
+      }
+    },
+    "status": {
+      "description": "Muestra el estado de los servicios de Nowly"
+    },
+    "support": {
+      "description": "Obtener ayuda con Nowly"
+    },
+    "links": {
+      "description": "Muestra enlaces útiles de Nowly"
+    },
+    "lang": {
+      "description": "Configura el idioma del bot de Nowly",
+      "options": {
+        "language": {
+          "name": "idioma",
+          "description": "Idioma"
+        },
+        "scope": {
+          "name": "alcance",
+          "description": "Aplicar a ti o al servidor"
+        }
+      },
+      "choices": {
+        "english": "Inglés",
+        "french": "Francés",
+        "spanish": "Español",
+        "me": "Yo",
+        "server": "Servidor"
+      }
+    }
+  }
+}
