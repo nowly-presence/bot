@@ -5,7 +5,7 @@ import {
   SlashCommandBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
-import { MaybePromise } from "#/types/promise";
+import { MaybePromise } from "@/types/promise";
 
 export type SlashCommandDefinition =
   | SlashCommandSubcommandsOnlyBuilder

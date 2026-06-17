@@ -1,12 +1,12 @@
-import { CommandExecute, AutocompleteExecute } from "#/utils/handler/command";
-import { NowlyApiService, PresenceSummary } from "#/services/nowly-api.service";
-import { LocaleService } from "#/services/locale.service";
-import { createLinkButton, createLinkRow } from "#/utils/components";
-import { createNowlyEmbed } from "#/utils/embed";
-import { formatNumber, formatRating, normalizeSlug, truncate } from "#/utils/format";
-import { t } from "#/utils/i18n";
-import { env } from "#/config/env";
-import { Locale } from "#/types/locale";
+import { CommandExecute, AutocompleteExecute } from "@/utils/handler/command";
+import { NowlyApiService, PresenceSummary } from "@/services/nowly-api.service";
+import { LocaleService } from "@/services/locale.service";
+import { createLinkButton, createLinkRow } from "@/utils/components";
+import { createNowlyEmbed } from "@/utils/embed";
+import { formatNumber, formatRating, normalizeSlug, truncate } from "@/utils/format";
+import { t } from "@/utils/i18n";
+import { env } from "@/config/env";
+import { Locale } from "@/types/locale";
 
 export const autocomplete: AutocompleteExecute = async (interaction) => {
   const focused = interaction.options.getFocused().toLowerCase();

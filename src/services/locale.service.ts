@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
 import { ChatInputCommandInteraction, PermissionsBitField } from "discord.js";
-import { Locale } from "#/types/locale";
+import { Locale } from "@/types/locale";
 
 type LocaleStore = {
   guilds: Record<string, Locale>;

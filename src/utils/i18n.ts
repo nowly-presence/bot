@@ -1,4 +1,4 @@
-import { Locale } from "#/types/locale";
+import { Locale } from "@/types/locale";
 
 type Messages = Record<string, string | Record<string, any>>;
 type Replacements = Record<string, string | number>;

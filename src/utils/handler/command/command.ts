@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import { existsSync, readdirSync, statSync } from "fs";
 import { sep } from "path";
-import { env } from "#/config/env";
+import { env } from "@/config/env";
 import { haveSubcommands, serializeCommandName } from "./command.util";
 import {
   AutocompleteCollection,

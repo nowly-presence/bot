@@ -1,7 +1,7 @@
-import { CommandExecute } from "#/utils/handler/command";
-import { LocaleService } from "#/services/locale.service";
-import { Locale } from "#/types/locale";
-import { t } from "#/utils/i18n";
+import { CommandExecute } from "@/utils/handler/command";
+import { LocaleService } from "@/services/locale.service";
+import { Locale } from "@/types/locale";
+import { t } from "@/utils/i18n";
 
 export const execute: CommandExecute = async (command) => {
   await LocaleService.load();
