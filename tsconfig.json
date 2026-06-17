@@ -1,21 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "target": "ES2024",
+    "module": "CommonJS",
     "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
     "resolveJsonModule": true,
-    "isolatedModules": true,
-    "noEmit": true,
+    "skipLibCheck": true,
     "types": ["node"],
+    "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@messages/*": ["./messages/*"]
+      "#/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "messages/**/*.json"]
+  "include": ["src/**/*"]
 }

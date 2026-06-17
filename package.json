@@ -2,21 +2,21 @@
   "name": "@nowly/discord",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
-    "start": "tsx src/index.ts",
-    "register": "tsx src/register-commands.ts",
+    "dev": "nodemon --exec node -r @swc-node/register -r tsconfig-paths/register ./src/client.ts",
+    "start": "node -r @swc-node/register -r tsconfig-paths/register ./src/client.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@swc-node/register": "^1.10.9",
+    "@swc/core": "^1.10.7",
     "discord.js": "^14.19.3",
     "dotenv": "^17.4.2",
-    "zod": "^3.25.76"
+    "tsconfig-paths": "^4.2.0"
   },
   "devDependencies": {
     "@types/node": "^22",
-    "tsx": "^4.19.3",
+    "nodemon": "^3.1.9",
     "typescript": "5.7.3"
   }
 }
