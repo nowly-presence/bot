@@ -1,5 +1,5 @@
 import { CommandExecute, AutocompleteExecute } from "@/utils/handler/command";
-import { NowlyApiService, PresenceSummary } from "@/services/nowly-api.service";
+import { NowlyApiService, PresenceMetadata, PresenceSummary } from "@/services/nowly-api.service";
 import { LocaleService } from "@/services/locale.service";
 import { createLinkButton, createLinkRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
@@ -42,7 +42,7 @@ export const execute: CommandExecute = async (command) => {
   }
 
   const release = await NowlyApiService.getPresence(match.slug);
-  const presence = release ?? match;
+  const presence = getPresenceMetadata(release ?? match);
   const appUrl = `${env.NOWLY_APP_BASE_URL}/presences/${presence.slug}`;
   const description = getLocalizedDescription(presence.description, locale);
   const embed = createNowlyEmbed(
@@ -81,9 +81,21 @@ export const execute: CommandExecute = async (command) => {
       inline: true,
     },
   );
+  const logoUrl = getPresenceAssetUrl(presence.slug, "logo", presence.assets?.logo);
+  const bannerUrl = getPresenceAssetUrl(presence.slug, "thumbnail", presence.assets?.thumbnail);
 
-  if (presence.author) {
-    embed.setFooter({ text: t(locale, "presenceFooter", { author: presence.author }) });
+  if (logoUrl) {
+    embed.setThumbnail(logoUrl);
+  }
+
+  if (bannerUrl) {
+    embed.setImage(bannerUrl);
+  }
+
+  const author = getAuthorName(presence.author);
+
+  if (author) {
+    embed.setFooter({ text: t(locale, "presenceFooter", { author }) });
   }
 
   await command.reply({
@@ -112,6 +124,43 @@ const findPresence = (presences: PresenceSummary[], query: string): PresenceSumm
   return presences.find((presence) => presence.slug === query)
     ?? presences.find((presence) => presence.name?.toLowerCase() === query)
     ?? searchPresences(presences, query)[0];
+};
+
+const getPresenceMetadata = (presence: PresenceSummary): PresenceMetadata => {
+  return {
+    ...presence,
+    ...(presence.metadata ?? {}),
+    slug: presence.slug,
+    version: presence.version ?? presence.metadata?.version,
+    totalInstalls: presence.totalInstalls,
+    activeUsers: presence.activeUsers,
+    rating: presence.rating,
+    ratingCount: presence.ratingCount,
+  };
+};
+
+const getPresenceAssetUrl = (
+  slug: string,
+  type: "logo" | "thumbnail",
+  asset?: string,
+): string | undefined => {
+  if (!asset) {
+    return undefined;
+  }
+
+  return `${env.NOWLY_API_BASE_URL}/presences/${encodeURIComponent(slug)}/assets/${type}`;
+};
+
+const getAuthorName = (author: PresenceSummary["author"]): string | undefined => {
+  if (!author) {
+    return undefined;
+  }
+
+  if (typeof author === "string") {
+    return author;
+  }
+
+  return author.name;
 };
 
 const getLocalizedDescription = (

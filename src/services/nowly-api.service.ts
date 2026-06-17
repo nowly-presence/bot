@@ -3,16 +3,27 @@ import { env } from "@/config/env";
 export type PresenceSummary = {
   slug: string;
   name?: string;
-  author?: string;
+  author?: string | {
+    name?: string;
+    github?: string;
+  };
   category?: string;
   description?: Record<string, string> | string;
+  assets?: {
+    logo?: string;
+    icon?: string;
+    thumbnail?: string;
+  };
   url?: string[];
   version?: string;
   totalInstalls?: number;
   activeUsers?: number;
   rating?: number;
   ratingCount?: number;
+  metadata?: PresenceMetadata;
 };
+
+export type PresenceMetadata = Omit<PresenceSummary, "metadata">;
 
 export type ServiceStatus = "operational" | "slow" | "degraded" | "down" | "unknown";
 
