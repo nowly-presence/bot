@@ -1,24 +1,10 @@
-import {
-  Client,
-  Collection,
-  SlashCommandSubcommandBuilder,
-  SlashCommandSubcommandGroupBuilder,
-} from "discord.js";
+import { env } from "@/config/env";
+import { Client, Collection, SlashCommandSubcommandBuilder, SlashCommandSubcommandGroupBuilder } from "discord.js";
 import { existsSync, readdirSync, statSync } from "fs";
 import { sep } from "path";
-import { env } from "@/config/env";
+import { subCommandDirName } from "./command.const";
+import { AutocompleteCollection, AutocompleteExecute, BuildersCollection, CommandExecute, CommandsCollection, LoadedCommands } from "./command.type";
 import { haveSubcommands, serializeCommandName } from "./command.util";
-import {
-  AutocompleteCollection,
-  AutocompleteExecute,
-  BuildersCollection,
-  CommandExecute,
-  CommandsCollection,
-  LoadedCommands,
-} from "./command.type";
-import {
-  subCommandDirName,
-} from "./command.const";
 
 export const load = async (commandsFolder: string): Promise<LoadedCommands> => {
   const commands: CommandsCollection = new Collection();

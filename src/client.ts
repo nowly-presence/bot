@@ -1,8 +1,7 @@
-import "dotenv/config";
-
-import { Client, GatewayIntentBits } from "discord.js";
-import { sep } from "path";
 import { loadEvents } from "@/utils/handler/event/event";
+import { Client, GatewayIntentBits } from "discord.js";
+import "dotenv/config";
+import { sep } from "path";
 
 export const client = new Client({
   intents: [

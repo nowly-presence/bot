@@ -1,2 +1,2 @@
 export { load } from "./command";
-export type { SlashCommandDefinition, CommandExecute, AutocompleteExecute } from "./command.type";
+export type { AutocompleteExecute, CommandExecute, SlashCommandDefinition } from "./command.type";

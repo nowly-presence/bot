@@ -1,11 +1,11 @@
-import { CommandExecute } from "@/utils/handler/command";
-import { NowlyApiService, ServiceStatus } from "@/services/nowly-api.service";
+import { env } from "@/config/env";
 import { LocaleService } from "@/services/locale.service";
+import { NowlyApiService, ServiceStatus } from "@/services/nowly-api.service";
+import { Locale } from "@/types/locale";
 import { createLinkButton, createLinkRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
+import { CommandExecute } from "@/utils/handler/command";
 import { t } from "@/utils/i18n";
-import { env } from "@/config/env";
-import { Locale } from "@/types/locale";
 
 type ServiceCurrent = {
   status: Exclude<ServiceStatus, "unknown">;

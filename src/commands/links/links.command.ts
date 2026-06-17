@@ -1,9 +1,9 @@
-import { CommandExecute } from "@/utils/handler/command";
+import { env } from "@/config/env";
 import { LocaleService } from "@/services/locale.service";
 import { createLinkButton, createLinkRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
+import { CommandExecute } from "@/utils/handler/command";
 import { t } from "@/utils/i18n";
-import { env } from "@/config/env";
 
 export const execute: CommandExecute = async (command) => {
   await LocaleService.load();

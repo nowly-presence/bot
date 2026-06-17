@@ -1,8 +1,4 @@
-import {
-  SlashCommandSubcommandBuilder,
-  SlashCommandSubcommandGroupBuilder,
-  SlashCommandSubcommandsOnlyBuilder,
-} from "discord.js";
+import { SlashCommandSubcommandBuilder, SlashCommandSubcommandGroupBuilder, SlashCommandSubcommandsOnlyBuilder } from "discord.js";
 import { SlashCommandDefinition } from "./command.type";
 
 export const haveSubcommands = (

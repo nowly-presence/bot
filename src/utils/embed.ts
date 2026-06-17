@@ -6,13 +6,8 @@ export const createNowlyEmbed = (title: string, description?: string, url?: stri
     .setTitle(title)
     .setTimestamp();
 
-  if (description) {
-    embed.setDescription(description);
-  }
-
-  if (url) {
-    embed.setURL(url);
-  }
+  if (description) embed.setDescription(description);
+  if (url) embed.setURL(url);
 
   return embed;
 };

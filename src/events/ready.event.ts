@@ -1,8 +1,8 @@
-import { type Client, Events, ActivityType } from "discord.js";
-import { sep } from "path";
-import { Event } from "@/utils/handler/event/event.type";
 import { load as loadCommands } from "@/utils/handler/command";
 import { listener, register } from "@/utils/handler/command/command";
+import { Event } from "@/utils/handler/event/event.type";
+import { ActivityType, type Client, Events } from "discord.js";
+import { sep } from "path";
 
 const event: Event<Events.ClientReady> = {
   name: Events.ClientReady,

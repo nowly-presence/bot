@@ -1,11 +1,7 @@
-import {
-  AutocompleteInteraction,
-  ChatInputCommandInteraction,
-  Collection,
-  SlashCommandBuilder,
-  SlashCommandSubcommandsOnlyBuilder,
-} from "discord.js";
 import { MaybePromise } from "@/types/promise";
+import {
+  AutocompleteInteraction, ChatInputCommandInteraction, Collection, SlashCommandBuilder, SlashCommandSubcommandsOnlyBuilder
+} from "discord.js";
 
 export type SlashCommandDefinition =
   | SlashCommandSubcommandsOnlyBuilder
