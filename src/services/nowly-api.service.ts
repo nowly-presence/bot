@@ -1,12 +1,15 @@
 import { env } from "@/config/env";
 
+export type PresencePerson = {
+  name?: string;
+  github?: string;
+};
+
 export type PresenceSummary = {
   slug: string;
   name?: string;
-  author?: string | {
-    name?: string;
-    github?: string;
-  };
+  author?: string | PresencePerson;
+  contributors?: PresencePerson[];
   category?: string;
   description?: Record<string, string> | string;
   assets?: {
