@@ -1,17 +1,12 @@
 import { env } from "@/config/env";
-import { LocaleService } from "@/services/locale.service";
 import { createLinkButton, createLinkRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
 import { CommandExecute } from "@/utils/handler/command";
-import { t } from "@/utils/i18n";
 
 export const execute: CommandExecute = async (command) => {
-  await LocaleService.load();
-
-  const locale = LocaleService.getInteractionLocale(command);
   const embed = createNowlyEmbed(
-    t(locale, "linksTitle"),
-    t(locale, "linksDescription"),
+    "Nowly links",
+    "Useful Nowly pages.",
     env.NOWLY_APP_BASE_URL,
   );
 
@@ -19,9 +14,9 @@ export const execute: CommandExecute = async (command) => {
     embeds: [embed],
     components: [
       createLinkRow(
-        createLinkButton(t(locale, "website"), env.NOWLY_APP_BASE_URL),
-        createLinkButton(t(locale, "openLibrary"), `${env.NOWLY_APP_BASE_URL}/presences`),
-        createLinkButton(t(locale, "openStatus"), `${env.NOWLY_APP_BASE_URL}/status`),
+        createLinkButton("Website", env.NOWLY_APP_BASE_URL),
+        createLinkButton("Open library", `${env.NOWLY_APP_BASE_URL}/presences`),
+        createLinkButton("Open status", `${env.NOWLY_APP_BASE_URL}/status`),
       ),
     ],
   });

@@ -30,10 +30,6 @@ src/
   client.ts
   events/
     ready.event.ts
-  locales/
-    en.json
-    fr.json
-    es.json
   commands/
     presence/
       presence.builder.ts
@@ -47,9 +43,6 @@ src/
     links/
       links.builder.ts
       links.command.ts
-    lang/
-      lang.builder.ts
-      lang.command.ts
   utils/
     handler/
       command/
@@ -58,14 +51,9 @@ src/
 
 Commands are discovered by folder convention: each `commands/<name>` folder must contain `<name>.builder.ts` and `<name>.command.ts`.
 
-Bot messages and Discord command localizations live in `src/locales/<locale>.json`.
-
 ## Commands
 
 - `/presence query:<name-or-slug>`
 - `/status`
 - `/support`
 - `/links`
-- `/lang language:<en|fr> [scope:<me|server>]`
-
-Language choices are stored in `.data/locales.json`, ignored by Git.
