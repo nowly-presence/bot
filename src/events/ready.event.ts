@@ -1,3 +1,4 @@
+import { TicketService } from "@/services/ticket.service";
 import { load as loadCommands } from "@/utils/handler/command";
 import { listener, register } from "@/utils/handler/command/command";
 import { Event } from "@/utils/handler/event/event.type";
@@ -12,6 +13,12 @@ const event: Event<Events.ClientReady> = {
 
     listener(client, commands, autocompletes);
     await register(client, builders);
+
+    try {
+      await TicketService.ensureSupportPanel(client);
+    } catch (error) {
+      console.error("Failed to ensure support ticket panel:", error);
+    }
 
     client.user.setActivity("Nowly presences", {
       type: ActivityType.Watching,

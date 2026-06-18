@@ -12,3 +12,22 @@ export const createLinkRow = (
 ): ActionRowBuilder<ButtonBuilder> => {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
 };
+
+export const createButton = (
+  customId: string,
+  label: string,
+  style: ButtonStyle = ButtonStyle.Primary,
+  disabled = false,
+): ButtonBuilder => {
+  return new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel(label)
+    .setStyle(style)
+    .setDisabled(disabled);
+};
+
+export const createButtonRow = (
+  ...buttons: ButtonBuilder[]
+): ActionRowBuilder<ButtonBuilder> => {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(...buttons);
+};
