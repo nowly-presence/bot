@@ -43,6 +43,11 @@ export type StatusReport = {
   }[];
 };
 
+export type AdStatus = {
+  hasAds: boolean;
+  adFree: boolean;
+};
+
 class NowlyApiServiceClass {
   private readonly baseUrl = env.NOWLY_API_BASE_URL;
 
@@ -80,6 +85,16 @@ class NowlyApiServiceClass {
 
   getStatus = async (): Promise<StatusReport> => {
     return this.request<StatusReport>("/status");
+  };
+
+  getAdStatus = async (deviceId: string): Promise<AdStatus> => {
+    return this.request<AdStatus>(`/ads/status?deviceId=${encodeURIComponent(deviceId)}`);
+  };
+
+  verifyCode = async (code: string): Promise<{ valid: boolean; maxDevices?: number }> => {
+    return this.request<{ valid: boolean; maxDevices?: number }>(
+      `/support/verify-code?code=${encodeURIComponent(code)}`,
+    );
   };
 }
 
