@@ -1,16 +1,19 @@
+import { env } from "@/config/env";
 import { Event } from "@/utils/handler/event/event.type";
 import { Events } from "discord.js";
-
-const MEMBER_ROLE_ID = "1516939000605315212";
 
 const event: Event<Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
   execute: async (member) => {
+    if (!env.DISCORD_MEMBER_ROLE_ID) {
+      return;
+    }
+
     try {
-      const role = await member.guild.roles.fetch(MEMBER_ROLE_ID);
+      const role = await member.guild.roles.fetch(env.DISCORD_MEMBER_ROLE_ID);
 
       if (!role) {
-        console.error(`Member role ${MEMBER_ROLE_ID} was not found`);
+        console.error(`Member role ${env.DISCORD_MEMBER_ROLE_ID} was not found`);
         return;
       }
 

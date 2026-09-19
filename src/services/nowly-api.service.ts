@@ -24,6 +24,7 @@ export type PresenceSummary = {
   rating?: number;
   ratingCount?: number;
   metadata?: PresenceMetadata;
+  bundle?: string;
 };
 
 export type PresenceMetadata = Omit<PresenceSummary, "metadata">;

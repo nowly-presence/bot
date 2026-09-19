@@ -1,3 +1,4 @@
+import { env } from "@/config/env";
 import { createButton, createButtonRow } from "@/utils/components";
 import { createNowlyEmbed } from "@/utils/embed";
 import { LabelBuilder } from "@discordjs/builders";
@@ -17,14 +18,15 @@ import {
   User,
 } from "discord.js";
 
-const SUPPORT_CHANNEL_ID = "1516932454848401599";
-const TICKET_CATEGORY_ID = "1516932920361750781";
+const SUPPORT_CHANNEL_ID = env.DISCORD_SUPPORT_CHANNEL_ID;
+export const TICKET_CATEGORY_ID = env.DISCORD_TICKET_CATEGORY_ID;
 const TICKET_NUMBER_LENGTH = 4;
 const TICKET_CHANNEL_NUMBER_REGEX = /-(?:closed-)?ticket-(\d{4})$/;
 
 export const ticketComponentIds = {
   create: "ticket:create",
   modal: "ticket:modal",
+  ai: "ticket:ai",
   close: (userId: string): string => `ticket:close:${userId}`,
   closeConfirm: (userId: string): string => `ticket:close-confirm:${userId}`,
 };
@@ -83,16 +85,22 @@ class TicketServiceClass {
       );
   };
 
-  createCloseTicketRow = (
+  createTicketActionsRow = (
     ownerId: string,
-    disabled = false,
+    options: { closeDisabled?: boolean; aiDisabled?: boolean } = {},
   ): ReturnType<typeof createButtonRow> => {
     return createButtonRow(
       createButton(
         ticketComponentIds.close(ownerId),
         "Close ticket",
         ButtonStyle.Danger,
-        disabled
+        options.closeDisabled ?? false,
+      ),
+      createButton(
+        ticketComponentIds.ai,
+        "Fix with AI",
+        ButtonStyle.Secondary,
+        options.aiDisabled ?? false,
       ),
     );
   };
@@ -145,10 +153,18 @@ class TicketServiceClass {
 
     await channel.send({
       embeds: [this.createTicketEmbed(user, content)],
-      components: [this.createCloseTicketRow(user.id)],
+      components: [this.createTicketActionsRow(user.id)],
     });
 
     return channel;
+  };
+
+  getTicketOwnerId = (topic: string | null | undefined): string | null => {
+    if (!topic?.startsWith("ticket-owner:")) {
+      return null;
+    }
+
+    return topic.slice("ticket-owner:".length);
   };
 
   findOpenTicket = async (guild: Guild, userId: string): Promise<TextChannel | null> => {

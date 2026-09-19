@@ -4,6 +4,7 @@ import {
   ticketComponentIds,
 } from "@/services/ticket.service";
 import { createButton, createButtonRow } from "@/utils/components";
+import { createNowlyEmbed } from "@/utils/embed";
 import { Event } from "@/utils/handler/event/event.type";
 import { ButtonStyle, ChannelType, Events, TextChannel } from "discord.js";
 
@@ -93,7 +94,7 @@ const event: Event<Events.InteractionCreate> = {
       }
 
       await interaction.message.edit({
-        components: [TicketService.createCloseTicketRow(ownerId, true)],
+        components: [TicketService.createTicketActionsRow(ownerId, { closeDisabled: true })],
       });
 
       await interaction.reply({
@@ -108,6 +109,35 @@ const event: Event<Events.InteractionCreate> = {
           ),
         ],
         flags: ["Ephemeral"],
+      });
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === ticketComponentIds.ai) {
+      if (!interaction.guild || !interaction.channel || interaction.channel.type !== ChannelType.GuildText) {
+        await interaction.reply({
+          content: "This action must be used inside a ticket channel.",
+          flags: ["Ephemeral"],
+        });
+        return;
+      }
+
+      const ownerId = TicketService.getTicketOwnerId(interaction.channel.topic);
+
+      if (!ownerId) {
+        await interaction.reply({
+          content: "This action must be used inside a ticket channel.",
+          flags: ["Ephemeral"],
+        });
+        return;
+      }
+
+      await interaction.message.edit({
+        components: [TicketService.createTicketActionsRow(ownerId, { aiDisabled: true })],
+      });
+
+      await interaction.reply({
+        embeds: [createNowlyEmbed(undefined, "Mention me or reply to one of my messages and I'll help using Nowly's docs.")],
       });
       return;
     }
