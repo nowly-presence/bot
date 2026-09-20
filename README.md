@@ -9,7 +9,7 @@ pnpm install
 cp .env.example .env
 ```
 
-Fill `DISCORD_BOT_TOKEN` with a Discord bot token.
+See `.env.example` for the full list of variables. Required: `DISCORD_BOT_TOKEN`. `DISCORD_APPLICATION_ID` and `DISCORD_GUILD_ID` are needed to register guild slash commands during local dev. `DISCORD_MEMBER_ROLE_ID`, `DISCORD_SUPPORT_CHANNEL_ID`, and `DISCORD_TICKET_CATEGORY_ID` default to the production Nowly server's IDs and only need overriding for a separate dev server. `OPENAI_API_KEY` is optional - the "Fix with AI" ticket assistant degrades gracefully without it.
 
 ## Scripts
 
@@ -23,26 +23,28 @@ pnpm start
 
 ## Structure
 
-This bot follows the same file loading pattern as `bot-discord-planning-uha`:
-
 ```text
 src/
   client.ts
+  config/
+    env.ts
   events/
     ready.event.ts
+    error.event.ts
+    guild-create.event.ts
+    guild-member-add.event.ts       # applies DISCORD_MEMBER_ROLE_ID to new members
+    ai-support.event.ts             # AI-assisted ticket triage
+    ticket-interaction.event.ts     # ticket button/menu interactions
   commands/
-    presence/
-      presence.builder.ts
-      presence.command.ts
-    status/
-      status.builder.ts
-      status.command.ts
-    support/
-      support.builder.ts
-      support.command.ts
+    donator/
     links/
-      links.builder.ts
-      links.command.ts
+    presence/
+    status/
+    support/
+      <name>.builder.ts
+      <name>.command.ts
+  services/
+    ticket.service.ts
   utils/
     handler/
       command/
@@ -53,7 +55,8 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 
 ## Commands
 
-- `/presence query:<name-or-slug>`
-- `/status`
-- `/support`
-- `/links`
+- `/presence query:<name-or-slug>` - look up a presence by name or slug
+- `/status` - Nowly service status
+- `/support` - open a support ticket
+- `/links` - useful project links
+- `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
