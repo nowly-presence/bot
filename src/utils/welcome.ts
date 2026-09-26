@@ -34,12 +34,12 @@ const welcomeRarityLabels: Record<WelcomeRarity, string> = {
 };
 
 const welcomeRarityColors: Record<WelcomeRarity, number> = {
-  common: 0x9aa4b2,
-  rare: 0x4d8dff,
-  epic: 0xa855f7,
-  legendary: 0xf59e0b,
-  mythic: 0xef4444,
-  celestial: 0x62d0ff,
+  common: 0xb0b0b0,
+  rare: 0x22d3ee,
+  epic: 0xa87ef5,
+  legendary: 0xfedb44,
+  mythic: 0xf22633,
+  celestial: 0xe4f2ff,
 };
 
 const cardArtUrl = (rarity: WelcomeRarity): string =>
@@ -132,10 +132,6 @@ export const removeCardFromPackets = (cardId: number): WelcomePacketName | null 
 
 export const getWelcomeCard = (cardId: number): WelcomeCard | undefined =>
   welcomeCards.find((card) => card.id === cardId);
-
-// The card the next natural draw will hand out, without touching the packet.
-export const peekWelcomePacketCard = (name: WelcomePacketName): WelcomeCard | undefined =>
-  name === "celestial" ? celestialBag[0] : bag[0];
 
 export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void => {
   bag = toCards(state.main, packetCards);
@@ -277,44 +273,20 @@ export const renderWelcomeCard = (
   return `${getRarityEmoji(card.rarity)} ${message}${joined}`;
 };
 
-// /card: the member's own card, plus how rare it is for the server.
+// /card: the member's own card, the art and the colour of its rarity.
 export const buildCardEmbed = (options: {
   userId: string;
   card: WelcomeCard;
   drawnAt: number;
   joinedAt?: number;
-  collection?: Record<WelcomeRarity, number>;
 }): EmbedBuilder => {
-  const { userId, card, drawnAt, joinedAt, collection } = options;
-  const drawn = Math.floor(drawnAt / 1000);
+  const { userId, card, drawnAt, joinedAt } = options;
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
-  const message = renderWelcomeMessage(card.message, userId);
-  // The card message already mentions the member, no need to say it twice.
-  const header = card.message.includes("{user}") ? "" : `<@${userId}>\n\n`;
-  const embed = new EmbedBuilder()
+
+  return new EmbedBuilder()
     .setColor(getRarityColor(card.rarity))
-    .setTitle(`${getRarityEmoji(card.rarity)} ${getRarityLabel(card.rarity)} welcome card`)
+    .setTitle(`${getRarityLabel(card.rarity)} welcome card`)
     .setThumbnail(cardArtUrl(card.rarity))
-    .setDescription(`${header}${message}${joined}`)
-    .addFields({
-      name: "Drawn",
-      value: `<t:${drawn}:R>`,
-      inline: true,
-    })
-    .setFooter({ text: "Enjoy Nowly." })
+    .setDescription(`${getRarityEmoji(card.rarity)} ${renderWelcomeMessage(card.message, userId)}${joined}`)
     .setTimestamp(drawnAt);
-
-  if (collection) {
-    const tally = welcomeRarities
-      .map((rarity) => {
-        const label = `${collection[rarity]} ${getRarityLabel(rarity).toLowerCase()}`;
-
-        return rarity === card.rarity ? `**${label}**` : label;
-      })
-      .join(" · ");
-
-    embed.addFields({ name: "Drawn so far", value: tally, inline: false });
-  }
-
-  return embed;
 };

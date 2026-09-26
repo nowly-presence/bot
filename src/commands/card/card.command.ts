@@ -36,7 +36,6 @@ export const execute: CommandExecute = async (command) => {
         card,
         drawnAt: pull.drawnAt,
         joinedAt: member ? resolveJoinedAt(member) : undefined,
-        collection: DatabaseService.getWelcomeRarityCounts(),
       }),
     ],
   });
