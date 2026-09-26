@@ -69,7 +69,7 @@ src/
     ticket.service.ts
     welcome.service.ts              # draws and posts cards
   utils/
-    welcome.ts                      # rarity emojis, bag shuffle, message rendering
+    welcome.ts                      # pack bags, sequential draw, message rendering
     handler/
       command/
       event/
@@ -86,7 +86,7 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 - `/send channel:<channel>` - write a message as the bot through a modal. Same permission as `/welcome`.
-- `/card` - show your own welcome card as an embed, coloured by rarity, with the card the next natural draw will hand out as a teaser.
+- `/card` - show your own welcome card as an embed, with the pack and rarity it came from.
 
 ## Greetings
 
@@ -94,23 +94,36 @@ The bot reacts with the server's wave emoji to bare greetings, so "hey everyone"
 
 ## Welcome cards
 
-When a member joins, the bot draws one of 103 cards and posts it as a plain text message in `DISCORD_WELCOME_CHANNEL_ID`, prefixed with a rarity emoji. Cards are distributed like a real card game: the rarity is baked into each card, the draw is uniform, and the deck is shuffled into a "packet" that is consumed one card at a time and reshuffled when empty, so the same message never appears twice in a row. That yields an emergent 50% common / 27% rare / 15% epic / 6% legendary / 2% mythic split rather than a hardcoded weight table.
+When a member joins, the bot draws a card and posts it as a plain text message in `DISCORD_WELCOME_CHANNEL_ID`, prefixed with the rarity emoji of the pack it came from.
 
-Celestial is the exception: 0.1% is below what a packet can express (a single celestial card in a hundred is a whole percent), so the three celestial cards are kept out of the main packet and drawn from their own packet on a per-draw roll (`celestialDrawRate` in `src/utils/welcome.ts`). That second packet is consumed like the first one, so a celestial message cannot come up again before all three have been pulled, roughly 3000 arrivals. A celestial hit does not consume a main packet card, so the split above stays intact.
+Cards live in **packs**, and a pack is just a message plus the rarity it was given in. The 103 texts are written once in `src/data/welcome-cards.ts` and every pack reuses them, so a new pack costs a distribution and a name, not another hundred messages. A card is therefore identified by its pack *and* its text, which is what lets two packs share a message without ever handing out the same card twice.
 
-Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code.
+| Pack | Cards | Rarities | Artwork |
+| --- | --- | --- | --- |
+| Genesis | 103 | 50 common / 27 rare / 15 epic / 6 legendary / 2 mythic / 3 celestial | Nowly logo |
+| Nova | 100 | 50 common / 27 rare / 15 epic / 6 legendary / 2 mythic | star |
 
-Leaving does give the card back, though. On `guildMemberRemove` the pull moves to `welcome_vacated_pulls` and the card is spliced back into the packet it came from, so the draw pool is whole again. On rejoin the bot looks for that card: if it is still in a packet, the member gets it back (silently, a natural rejoin posts no message) and nobody else can draw it. If somebody already drew it in the meantime, the member is out, no re-roll. `/welcome` reports both cases and posts the card when the admin is the one asking.
+Packs are dealt **in order**: the first one still holding a card is the active pack, and the next one takes over by itself the moment the previous one has been dealt out entirely. Genesis is therefore the first 103 arrivals, then Nova picks up the following 100. Adding a third pack is one more entry in the `welcomePacks` array, nothing else.
 
-Both packets are persisted too: `welcome_packets` stores the card ids that are still in each packet, rewritten after every natural draw and reloaded on startup, so a restart or a redeploy resumes the exact same packets. A failed write is logged and the draw still goes through with the in-memory packet. This is the one piece of state that requires the single replica: two bots sharing the file would consume the same packets.
+Nova keeps the exact same odds as Genesis but shifts the distribution by half a pack, so the texts that were common become rare and the top tiers land on texts Genesis never gave them. No text keeps the same rarity in both packs, which is what makes a Nova card feel like its own thing rather than a reskin.
 
-Passing `rarity` to `/welcome` draws from that rarity's pool without consuming the packet, so admin-forced cards do not skew the natural distribution.
+There is no reshuffling: once a pack is empty it stays empty, and when every pack is empty the bot reports that no cards are left instead of recycling old ones.
+
+Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code. The row keeps the `pack` alongside the card id, so a card stays attached to the edition it was drawn from.
+
+Cards already handed out before the packs existed are Genesis cards, and the migration says so: `welcome_pulls` and `welcome_vacated_pulls` gain a `pack` column defaulting to `genesis`, and the old `main` and `celestial` packets are merged into a single `genesis` packet. Nothing is reset, so a card that was already drawn is never dealt a second time.
+
+Leaving does give the card back, though. On `guildMemberRemove` the pull moves to `welcome_vacated_pulls` and the card goes back into its pack, so the draw pool is whole again. On rejoin the bot takes that card back out of the pack: if it is still there, the member gets it (silently, a natural rejoin posts no message) and nobody else can draw it. If somebody already drew it in the meantime, the member is out, no re-roll. `/welcome` reports both cases and posts the card when the admin is the one asking.
+
+Each pack is persisted too: `welcome_packets` stores the card ids that are still in each pack, rewritten after every draw and reloaded on startup, so a restart or a redeploy resumes the exact same packs. A failed write is logged and the draw still goes through with the in-memory pack. This is the one piece of state that requires the single replica: two bots sharing the file would consume the same packs.
+
+Passing `rarity` to `/welcome` takes a card of that rarity out of the active pack, so admin-forced cards stay unique and never get handed to somebody else later.
 
 When the member has been in the server for more than an hour at that point, the message ends with `(joined <t:...:R>)`, built from `member.joinedAt`, so it reads as "joined 3 days ago" and hovering shows the exact date. That covers every card given through `/welcome` and keeps real arrivals clean.
 
 `joined` overrides it, for members whose real join date is wrong (a leave and rejoin resets it). It takes either a delay (`3d`, `12h`, `2h30m`, `1w`) or an exact date (`2025-06-15`, `15/06/2025`), pinned to midday UTC. An unreadable value or a date in the future is rejected with an error, and the time of day cannot be set.
 
-`/card` reads the pull back and renders it as an embed: the rarity title, the card message and the join date when the member has been here for more than an hour, the `embed_<rarity>.png` art from the CDN as the thumbnail, and the rarity colour (common `#B0B0B0`, rare `#22D3EE`, epic `#A87EF5`, legendary `#FEDB44`, mythic `#F22633`, celestial `#E4F2FF`).
+`/card` reads the pull back and renders it as an embed: the pack and rarity in the title, the card message and the join date when the member has been here for more than an hour, the `cards/<pack>/embed_<rarity>.png` art from the CDN as the thumbnail, and the rarity colour (common `#B0B0B0`, rare `#22D3EE`, epic `#A87EF5`, legendary `#FEDB44`, mythic `#F22633`, celestial `#E4F2FF`).
 
 ## Deployment
 

@@ -151,7 +151,7 @@ class DatabaseServiceClass {
       return cardIds.filter((cardId): cardId is number => Number.isInteger(cardId));
     } catch (error) {
       console.warn(
-        `Stored welcome packet "${name}" is unreadable, it will be reshuffled:`,
+        `Stored welcome pack "${name}" is unreadable, it will be rebuilt from the full pack:`,
         error instanceof Error ? error.message : error,
       );
 
