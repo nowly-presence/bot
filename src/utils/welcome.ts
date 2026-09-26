@@ -1,4 +1,9 @@
-import { WelcomeCard, WelcomeRarity, welcomeCards } from "@/data/welcome-cards";
+import {
+  WelcomeCard,
+  WelcomePacketName,
+  WelcomeRarity,
+  welcomeCards,
+} from "@/data/welcome-cards";
 
 export const welcomeRarities: WelcomeRarity[] = [
   "common",
@@ -28,8 +33,10 @@ const welcomeRarityLabels: Record<WelcomeRarity, string> = {
 };
 
 // 0.1%: far below what a packet can express, since one celestial card in a
-// hundred is a whole percent. Celestial cards are drawn from their own pool on
-// a per-draw roll instead of sitting in the packet.
+// hundred is a whole percent. Celestial cards are drawn from their own packet
+// on a per-draw roll instead of sitting in the main one, and that packet is
+// consumed like any other, so a celestial message cannot come up again before
+// the three of them have all been pulled.
 const celestialDrawRate = 0.001;
 
 const celestialRarity: WelcomeRarity = "celestial";
@@ -38,6 +45,21 @@ const packetCards = welcomeCards.filter((card) => card.rarity !== celestialRarit
 const celestialCards = welcomeCards.filter((card) => card.rarity === celestialRarity);
 
 let bag: WelcomeCard[] = [];
+let celestialBag: WelcomeCard[] = [];
+
+export type WelcomePacketState = Record<WelcomePacketName, number[]>;
+
+const toCards = (cardIds: number[] | undefined, pool: WelcomeCard[]): WelcomeCard[] => {
+  if (!cardIds?.length) {
+    return [];
+  }
+
+  const cardsById = new Map(pool.map((card) => [card.id, card]));
+
+  return cardIds
+    .map((cardId) => cardsById.get(cardId))
+    .filter((card): card is WelcomeCard => card !== undefined);
+};
 
 const pickOne = (cards: WelcomeCard[]): WelcomeCard => {
   const card = cards[Math.floor(Math.random() * cards.length)];
@@ -67,13 +89,27 @@ export const getRarityLabel = (rarity: WelcomeRarity): string => welcomeRarityLa
 export const isWelcomeRarity = (value: string): value is WelcomeRarity =>
   welcomeRarities.includes(value as WelcomeRarity);
 
+export const getWelcomePacketState = (): WelcomePacketState => ({
+  main: bag.map((card) => card.id),
+  celestial: celestialBag.map((card) => card.id),
+});
+
+export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void => {
+  bag = toCards(state.main, packetCards);
+  celestialBag = toCards(state.celestial, celestialCards);
+};
+
 export const drawWelcomeCard = (rarity?: WelcomeRarity): WelcomeCard => {
   if (rarity) {
     return pickOne(welcomeCards.filter((card) => card.rarity === rarity));
   }
 
   if (celestialCards.length > 0 && Math.random() < celestialDrawRate) {
-    return pickOne(celestialCards);
+    if (celestialBag.length === 0) {
+      celestialBag = shuffle(celestialCards);
+    }
+
+    return pickOne(celestialBag.splice(celestialBag.length - 1, 1));
   }
 
   if (bag.length === 0) {

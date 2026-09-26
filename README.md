@@ -90,11 +90,11 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 
 When a member joins, the bot draws one of 103 cards and posts it as a plain text message in `DISCORD_WELCOME_CHANNEL_ID`, prefixed with a rarity emoji. Cards are distributed like a real card game: the rarity is baked into each card, the draw is uniform, and the deck is shuffled into a "packet" that is consumed one card at a time and reshuffled when empty, so the same message never appears twice in a row. That yields an emergent 50% common / 27% rare / 15% epic / 6% legendary / 2% mythic split rather than a hardcoded weight table.
 
-Celestial is the exception: 0.1% is below what a packet can express (a single celestial card in a hundred is a whole percent), so the three celestial cards are kept out of the packet and drawn from their own pool on a per-draw roll (`celestialDrawRate` in `src/utils/welcome.ts`). A celestial hit does not consume a packet card, so the split above stays intact.
+Celestial is the exception: 0.1% is below what a packet can express (a single celestial card in a hundred is a whole percent), so the three celestial cards are kept out of the main packet and drawn from their own packet on a per-draw roll (`celestialDrawRate` in `src/utils/welcome.ts`). That second packet is consumed like the first one, so a celestial message cannot come up again before all three have been pulled, roughly 3000 arrivals. A celestial hit does not consume a main packet card, so the split above stays intact.
 
 Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code. A member who leaves and rejoins with the same account is therefore skipped.
 
-The packet itself lives in memory and is reshuffled on restart, so a message can repeat across a restart. The "one card per member" rule is what is persisted.
+Both packets are persisted too: `welcome_packets` stores the card ids that are still in each packet, rewritten after every natural draw and reloaded on startup, so a restart or a redeploy resumes the exact same packets. A failed write is logged and the draw still goes through with the in-memory packet. This is the one piece of state that requires the single replica: two bots sharing the file would consume the same packets.
 
 Passing `rarity` to `/welcome` draws from that rarity's pool without consuming the packet, so admin-forced cards do not skew the natural distribution.
 

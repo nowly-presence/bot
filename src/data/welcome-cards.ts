@@ -12,6 +12,8 @@ export type WelcomeCard = {
   message: string;
 };
 
+export type WelcomePacketName = "main" | "celestial";
+
 export const welcomeCards: WelcomeCard[] = [
   {
     id: 1,

@@ -1,6 +1,7 @@
 import { DatabaseService } from "@/services/database.service";
 import { GuildGuardService } from "@/services/guild-guard.service";
 import { TicketService } from "@/services/ticket.service";
+import { WelcomeService } from "@/services/welcome.service";
 import { load as loadCommands } from "@/utils/handler/command";
 import { listener, register } from "@/utils/handler/command/command";
 import { Event } from "@/utils/handler/event/event.type";
@@ -19,6 +20,7 @@ const event: Event<Events.ClientReady> = {
 
     try {
       DatabaseService.connect();
+      WelcomeService.restorePackets();
     } catch (error) {
       console.error("Failed to open the SQLite database, welcome cards are disabled:", error);
     }

@@ -1,7 +1,12 @@
 import { env } from "@/config/env";
-import { WelcomeRarity } from "@/data/welcome-cards";
+import { WelcomePacketName, WelcomeRarity } from "@/data/welcome-cards";
 import { DatabaseService, WelcomePull, WelcomeSource } from "@/services/database.service";
-import { drawWelcomeCard, renderWelcomeCard } from "@/utils/welcome";
+import {
+  drawWelcomeCard,
+  getWelcomePacketState,
+  renderWelcomeCard,
+  restoreWelcomePackets,
+} from "@/utils/welcome";
 import { GuildMember } from "discord.js";
 
 export type WelcomeGrantResult =
@@ -10,7 +15,22 @@ export type WelcomeGrantResult =
   | { status: "disabled" }
   | { status: "failed"; pull?: WelcomePull };
 
+const packetNames: WelcomePacketName[] = ["main", "celestial"];
+
 class WelcomeServiceClass {
+  restorePackets = (): void => {
+    restoreWelcomePackets({
+      main: DatabaseService.getWelcomePacket("main"),
+      celestial: DatabaseService.getWelcomePacket("celestial"),
+    });
+
+    const state = getWelcomePacketState();
+
+    console.log(
+      `Welcome packets restored from SQLite: ${state.main.length} card(s) left in the main packet, ${state.celestial.length} celestial card(s) left`,
+    );
+  };
+
   grantWelcomeCard = async (
     member: GuildMember,
     source: WelcomeSource,
@@ -27,6 +47,11 @@ class WelcomeServiceClass {
     }
 
     const card = drawWelcomeCard(rarity);
+
+    if (!rarity) {
+      this.savePackets();
+    }
+
     const pull: WelcomePull = {
       userId: member.id,
       cardId: card.id,
@@ -55,6 +80,18 @@ class WelcomeServiceClass {
     }
 
     return { status: "posted", pull };
+  };
+
+  private savePackets = (): void => {
+    const state = getWelcomePacketState();
+
+    try {
+      for (const name of packetNames) {
+        DatabaseService.saveWelcomePacket(name, state[name]);
+      }
+    } catch (error) {
+      console.error("Failed to persist the welcome packets in SQLite:", error);
+    }
   };
 }
 

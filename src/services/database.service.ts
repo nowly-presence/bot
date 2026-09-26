@@ -1,5 +1,5 @@
 import { env } from "@/config/env";
-import { WelcomeRarity } from "@/data/welcome-cards";
+import { WelcomePacketName, WelcomeRarity } from "@/data/welcome-cards";
 import { isWelcomeRarity } from "@/utils/welcome";
 import { mkdirSync } from "fs";
 import { DatabaseSync, StatementSync } from "node:sqlite";
@@ -21,6 +21,10 @@ type WelcomePullRow = {
   rarity: string;
   source: string;
   drawn_at: number;
+};
+
+type WelcomePacketRow = {
+  card_ids: string;
 };
 
 class DatabaseServiceClass {
@@ -67,6 +71,43 @@ class DatabaseServiceClass {
     return Number(result.changes) === 1;
   };
 
+  getWelcomePacket = (name: WelcomePacketName): number[] => {
+    const row = this.prepare(
+      "SELECT card_ids FROM welcome_packets WHERE name = ?",
+    ).get(name) as WelcomePacketRow | undefined;
+
+    if (!row) {
+      return [];
+    }
+
+    try {
+      const cardIds: unknown = JSON.parse(row.card_ids);
+
+      if (!Array.isArray(cardIds)) {
+        throw new Error("expected an array of card ids");
+      }
+
+      return cardIds.filter((cardId): cardId is number => Number.isInteger(cardId));
+    } catch (error) {
+      console.warn(
+        `Stored welcome packet "${name}" is unreadable, it will be reshuffled:`,
+        error instanceof Error ? error.message : error,
+      );
+
+      return [];
+    }
+  };
+
+  saveWelcomePacket = (name: WelcomePacketName, cardIds: number[]): void => {
+    this.prepare(`
+      INSERT INTO welcome_packets (name, card_ids, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT (name) DO UPDATE SET
+        card_ids = excluded.card_ids,
+        updated_at = excluded.updated_at
+    `).run(name, JSON.stringify(cardIds), Date.now());
+  };
+
   private prepare = (sql: string): StatementSync => {
     if (!this.database) {
       throw new Error("Database is not connected");
@@ -91,6 +132,14 @@ class DatabaseServiceClass {
           source TEXT NOT NULL,
           drawn_at INTEGER NOT NULL,
           PRIMARY KEY (user_id)
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS welcome_packets (
+          name TEXT NOT NULL,
+          card_ids TEXT NOT NULL,
+          updated_at INTEGER NOT NULL,
+          PRIMARY KEY (name)
         ) STRICT
       `);
 
