@@ -110,7 +110,7 @@ When the member has been in the server for more than an hour at that point, the 
 
 `joined` overrides it, for members whose real join date is wrong (a leave and rejoin resets it). It takes either a delay (`3d`, `12h`, `2h30m`, `1w`) or an exact date (`2025-06-15`, `15/06/2025`), pinned to midday UTC. An unreadable value or a date in the future is rejected with an error, and the time of day cannot be set.
 
-`/card` reads the pull back and renders it as an embed, so the collection is usable outside the welcome channel: the card message, the join date when the member has been here for more than an hour, when it was drawn, and the next card in the packet. Nothing is consumed by looking, `peekWelcomePacketCard` only reads the head of the packet.
+`/card` reads the pull back and renders it as an embed, so the collection is usable outside the welcome channel: the card message, the join date when the member has been here for more than an hour, when it was drawn, and how many cards of each rarity the server has drawn so far, with the member's own rarity in bold. It shows how rare the card actually is, which is more useful than spoiling the next draw.
 
 ## Deployment
 

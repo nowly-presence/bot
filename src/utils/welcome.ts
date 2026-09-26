@@ -277,15 +277,15 @@ export const renderWelcomeCard = (
   return `${getRarityEmoji(card.rarity)} ${message}${joined}`;
 };
 
-// /card: the member's own card, plus the one the next natural draw hands out.
+// /card: the member's own card, plus how rare it is for the server.
 export const buildCardEmbed = (options: {
   userId: string;
   card: WelcomeCard;
   drawnAt: number;
   joinedAt?: number;
-  nextCard?: WelcomeCard;
+  collection?: Record<WelcomeRarity, number>;
 }): EmbedBuilder => {
-  const { userId, card, drawnAt, joinedAt, nextCard } = options;
+  const { userId, card, drawnAt, joinedAt, collection } = options;
   const drawn = Math.floor(drawnAt / 1000);
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
   const message = renderWelcomeMessage(card.message, userId);
@@ -304,12 +304,16 @@ export const buildCardEmbed = (options: {
     .setFooter({ text: "Enjoy Nowly." })
     .setTimestamp(drawnAt);
 
-  if (nextCard) {
-    embed.addFields({
-      name: "Next in the packet",
-      value: `${getRarityEmoji(nextCard.rarity)} ${nextCard.message.replaceAll("{user}", "you")}`,
-      inline: false,
-    });
+  if (collection) {
+    const tally = welcomeRarities
+      .map((rarity) => {
+        const label = `${collection[rarity]} ${getRarityLabel(rarity).toLowerCase()}`;
+
+        return rarity === card.rarity ? `**${label}**` : label;
+      })
+      .join(" · ");
+
+    embed.addFields({ name: "Drawn so far", value: tally, inline: false });
   }
 
   return embed;

@@ -106,6 +106,31 @@ class DatabaseServiceClass {
     this.prepare("DELETE FROM welcome_vacated_pulls WHERE user_id = ?").run(userId);
   };
 
+  // How many cards of each rarity the server has drawn, to show how rare a
+  // member's card actually is.
+  getWelcomeRarityCounts = (): Record<WelcomeRarity, number> => {
+    const counts = {
+      common: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+      mythic: 0,
+      celestial: 0,
+    };
+
+    const rows = this.prepare(
+      "SELECT rarity, COUNT(*) AS total FROM welcome_pulls GROUP BY rarity",
+    ).all() as { rarity: string; total: number }[];
+
+    for (const row of rows) {
+      if (isWelcomeRarity(row.rarity)) {
+        counts[row.rarity] = Number(row.total);
+      }
+    }
+
+    return counts;
+  };
+
   insertWelcomePull = (pull: WelcomePull): boolean => {
     const result = this.prepare(`
       INSERT INTO welcome_pulls (user_id, card_id, rarity, source, drawn_at)

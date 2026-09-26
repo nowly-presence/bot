@@ -1,7 +1,7 @@
 import { DatabaseService } from "@/services/database.service";
 import { resolveJoinedAt } from "@/services/welcome.service";
 import { CommandExecute } from "@/utils/handler/command";
-import { buildCardEmbed, getWelcomeCard, peekWelcomePacketCard } from "@/utils/welcome";
+import { buildCardEmbed, getWelcomeCard } from "@/utils/welcome";
 import { GuildMember } from "discord.js";
 
 export const execute: CommandExecute = async (command) => {
@@ -36,7 +36,7 @@ export const execute: CommandExecute = async (command) => {
         card,
         drawnAt: pull.drawnAt,
         joinedAt: member ? resolveJoinedAt(member) : undefined,
-        nextCard: peekWelcomePacketCard("main"),
+        collection: DatabaseService.getWelcomeRarityCounts(),
       }),
     ],
   });
