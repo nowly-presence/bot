@@ -11,6 +11,10 @@ const event: Event<Events.ClientReady> = {
   name: Events.ClientReady,
   once: true,
   execute: async (client: Client<true>) => {
+    console.log(
+      `Connected to Discord as ${client.user.tag} (${client.user.id}) with ${client.guilds.cache.size} guild(s) cached`,
+    );
+
     await GuildGuardService.leaveUnauthorizedGuilds(client);
 
     try {
@@ -34,7 +38,11 @@ const event: Event<Events.ClientReady> = {
       type: ActivityType.Watching,
     });
 
-    console.log("Successfully loaded Nowly Discord commands");
+    console.log(
+      `Nowly is ready: ${builders.size} command(s) loaded, welcome cards ${
+        DatabaseService.isConnected() ? "enabled" : "disabled"
+      }`,
+    );
   },
 };
 

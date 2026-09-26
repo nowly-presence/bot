@@ -28,23 +28,11 @@ class DatabaseServiceClass {
 
   connect = (): void => {
     if (this.database) {
+      console.log(`SQLite already open at ${env.DISCORD_DB_PATH}`);
       return;
     }
 
-    mkdirSync(dirname(env.DISCORD_DB_PATH), { recursive: true });
-
-    this.database = new DatabaseSync(env.DISCORD_DB_PATH);
-    this.database.exec("PRAGMA journal_mode = WAL");
-    this.database.exec(`
-      CREATE TABLE IF NOT EXISTS welcome_pulls (
-        user_id TEXT NOT NULL,
-        card_id INTEGER NOT NULL,
-        rarity TEXT NOT NULL,
-        source TEXT NOT NULL,
-        drawn_at INTEGER NOT NULL,
-        PRIMARY KEY (user_id)
-      ) STRICT
-    `);
+    this.database = this.open();
   };
 
   isConnected = (): boolean => {
@@ -85,6 +73,53 @@ class DatabaseServiceClass {
     }
 
     return this.database.prepare(sql);
+  };
+
+  private open = (): DatabaseSync => {
+    let database: DatabaseSync | null = null;
+
+    try {
+      mkdirSync(dirname(env.DISCORD_DB_PATH), { recursive: true });
+
+      database = new DatabaseSync(env.DISCORD_DB_PATH);
+      database.exec("PRAGMA journal_mode = WAL");
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS welcome_pulls (
+          user_id TEXT NOT NULL,
+          card_id INTEGER NOT NULL,
+          rarity TEXT NOT NULL,
+          source TEXT NOT NULL,
+          drawn_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id)
+        ) STRICT
+      `);
+
+      const integrity = database.prepare("PRAGMA quick_check").get() as
+        | { quick_check: string }
+        | undefined;
+
+      if (integrity?.quick_check !== "ok") {
+        throw new Error(`integrity check returned "${integrity?.quick_check ?? "no result"}"`);
+      }
+
+      const { total } = database
+        .prepare("SELECT COUNT(*) AS total FROM welcome_pulls")
+        .get() as { total: number };
+
+      console.log(
+        `SQLite connected at ${env.DISCORD_DB_PATH} (integrity ok, ${total} welcome pull(s) stored)`,
+      );
+
+      return database;
+    } catch (error) {
+      database?.close();
+
+      throw new Error(
+        `Cannot open the SQLite database at ${env.DISCORD_DB_PATH}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
   };
 }
 

@@ -5,16 +5,16 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 
 WORKDIR /app
 
-# Manifests only, so the dependency layer survives source-only changes.
-# pnpm-workspace.yaml carries the allowBuilds entry required by @swc/core.
-COPY package.json pnpm-workspace.yaml .npmrc ./
-COPY apps/discord/package.json apps/discord/package.json
+# This repository is the `bot` repo, so the build context is the package root
+# (there is no monorepo workspace here). pnpm 11 gates dependency build scripts
+# and only reads `allowBuilds` from a pnpm-workspace.yaml, which this repo does
+# not ship, so it is written inside the image to let @swc/core's postinstall
+# pick the alpine/musl native binding.
+COPY package.json ./
+RUN printf "allowBuilds:\n  '@swc/core': true\n" > pnpm-workspace.yaml \
+  && pnpm install --prod --no-frozen-lockfile
 
-RUN pnpm install --filter @nowly/discord --prod --no-frozen-lockfile
-
-COPY apps/discord ./apps/discord
-
-WORKDIR /app/apps/discord
+COPY . .
 
 ENV NODE_ENV=production \
     DISCORD_DB_PATH=/data/discord.sqlite
@@ -22,7 +22,7 @@ ENV NODE_ENV=production \
 # The SQLite file lives on a mounted volume. Docker copies this directory's
 # ownership into a fresh named volume, so the node user can write there. A bind
 # mount instead needs `chown 1000:1000 /mounted/path` on the host.
-RUN mkdir -p /data && chown -R node:node /data /app/apps/discord
+RUN mkdir -p /data && chown -R node:node /data
 
 VOLUME /data
 

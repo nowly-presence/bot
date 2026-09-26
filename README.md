@@ -98,8 +98,12 @@ Passing `rarity` to `/welcome` draws from that rarity's pool without consuming t
 
 ## Deployment
 
-`Dockerfile` builds the bot for Dokploy. The build context must be the **monorepo root** (it copies the root workspace manifests and `apps/discord`), with the Dockerfile path set to `apps/discord/Dockerfile`.
+`Dockerfile` builds the bot for Dokploy. This repository is a standalone package, so the build context is the **repository root** (where `package.json` lives) with the Dockerfile path set to `Dockerfile`. The bot is not built from the `nowly` monorepo.
 
 State is kept in SQLite via the built-in `node:sqlite` module, so there is no native driver to install. It needs Node 22.13+ (the image uses `node:22-alpine`) and it only supports a single writer, so the bot must run as exactly one replica.
 
+`typescript` is a runtime dependency because `@swc-node/register` requires it to hook `require`, so a `--prod` install is enough to boot the container.
+
 Mount a volume at `/data`; the database is written to `/data/discord.sqlite`. Docker copies the image's `/data` ownership into a fresh named volume, so the non-root `node` user can write there. For a bind mount instead, run `chown 1000:1000 <host-path>`.
+
+On startup the bot logs the node version and database path, the identity it connected as, the SQLite integrity check result, and a final ready line with the command count. A failed login is logged and exits with code 1; an unusable database is logged and only disables welcome cards.
