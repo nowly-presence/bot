@@ -85,6 +85,11 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/links` - useful project links
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
+- `/send channel:<channel>` - write a message as the bot through a modal. Same permission as `/welcome`.
+
+## Greetings
+
+The bot reacts with the server's wave emoji to bare greetings, so "hey everyone" gets a 👋 back while "hey, can you look at this" is left alone. Detection is word based (`src/utils/greetings.ts`) and covers the usual English, French, Spanish, Portuguese, Italian, German, Dutch, Russian, Japanese, Korean, Chinese and Arabic greetings, plus times of day and addressed groups next to them ("good morning everyone", "salut tout le monde").
 
 ## Welcome cards
 
@@ -92,7 +97,9 @@ When a member joins, the bot draws one of 103 cards and posts it as a plain text
 
 Celestial is the exception: 0.1% is below what a packet can express (a single celestial card in a hundred is a whole percent), so the three celestial cards are kept out of the main packet and drawn from their own packet on a per-draw roll (`celestialDrawRate` in `src/utils/welcome.ts`). That second packet is consumed like the first one, so a celestial message cannot come up again before all three have been pulled, roughly 3000 arrivals. A celestial hit does not consume a main packet card, so the split above stays intact.
 
-Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code. A member who leaves and rejoins with the same account is therefore skipped.
+Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code.
+
+Leaving does give the card back, though. On `guildMemberRemove` the pull moves to `welcome_vacated_pulls` and the card is spliced back into the packet it came from, so the draw pool is whole again. On rejoin the bot looks for that card: if it is still in a packet, the member gets it back (silently, a natural rejoin posts no message) and nobody else can draw it. If somebody already drew it in the meantime, the member is out, no re-roll. `/welcome` reports both cases and posts the card when the admin is the one asking.
 
 Both packets are persisted too: `welcome_packets` stores the card ids that are still in each packet, rewritten after every natural draw and reloaded on startup, so a restart or a redeploy resumes the exact same packets. A failed write is logged and the draw still goes through with the in-memory packet. This is the one piece of state that requires the single replica: two bots sharing the file would consume the same packets.
 
