@@ -1,3 +1,4 @@
+import { DatabaseService } from "@/services/database.service";
 import { GuildGuardService } from "@/services/guild-guard.service";
 import { TicketService } from "@/services/ticket.service";
 import { load as loadCommands } from "@/utils/handler/command";
@@ -11,6 +12,12 @@ const event: Event<Events.ClientReady> = {
   once: true,
   execute: async (client: Client<true>) => {
     await GuildGuardService.leaveUnauthorizedGuilds(client);
+
+    try {
+      DatabaseService.connect();
+    } catch (error) {
+      console.error("Failed to open the SQLite database, welcome cards are disabled:", error);
+    }
 
     const { commands, autocompletes, builders } = await loadCommands(`${__dirname}${sep}..${sep}commands`);
 

@@ -1,10 +1,17 @@
 import { env } from "@/config/env";
+import { WelcomeService } from "@/services/welcome.service";
 import { Event } from "@/utils/handler/event/event.type";
 import { Events } from "discord.js";
 
 const event: Event<Events.GuildMemberAdd> = {
   name: Events.GuildMemberAdd,
   execute: async (member) => {
+    if (member.user.bot) {
+      return;
+    }
+
+    await WelcomeService.grantWelcomeCard(member, "join");
+
     if (!env.DISCORD_MEMBER_ROLE_ID) {
       return;
     }
