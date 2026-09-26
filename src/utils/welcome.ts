@@ -4,6 +4,7 @@ import {
   WelcomeRarity,
   welcomeCards,
 } from "@/data/welcome-cards";
+import { EmbedBuilder } from "discord.js";
 
 export const welcomeRarities: WelcomeRarity[] = [
   "common",
@@ -30,6 +31,15 @@ const welcomeRarityLabels: Record<WelcomeRarity, string> = {
   legendary: "Legendary",
   mythic: "Mythic",
   celestial: "Celestial",
+};
+
+const welcomeRarityColors: Record<WelcomeRarity, number> = {
+  common: 0x9aa4b2,
+  rare: 0x4d8dff,
+  epic: 0xa855f7,
+  legendary: 0xf59e0b,
+  mythic: 0xef4444,
+  celestial: 0x62d0ff,
 };
 
 // 0.1%: far below what a packet can express, since one celestial card in a
@@ -86,6 +96,8 @@ export const getRarityEmoji = (rarity: WelcomeRarity): string => welcomeRarityEm
 
 export const getRarityLabel = (rarity: WelcomeRarity): string => welcomeRarityLabels[rarity];
 
+export const getRarityColor = (rarity: WelcomeRarity): number => welcomeRarityColors[rarity];
+
 export const isWelcomeRarity = (value: string): value is WelcomeRarity =>
   welcomeRarities.includes(value as WelcomeRarity);
 
@@ -117,6 +129,10 @@ export const removeCardFromPackets = (cardId: number): WelcomePacketName | null 
 
 export const getWelcomeCard = (cardId: number): WelcomeCard | undefined =>
   welcomeCards.find((card) => card.id === cardId);
+
+// The card the next natural draw will hand out, without touching the packet.
+export const peekWelcomePacketCard = (name: WelcomePacketName): WelcomeCard | undefined =>
+  name === "celestial" ? celestialBag[0] : bag[0];
 
 export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void => {
   bag = toCards(state.main, packetCards);
@@ -256,4 +272,41 @@ export const renderWelcomeCard = (
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
 
   return `${getRarityEmoji(card.rarity)} ${message}${joined}`;
+};
+
+// /card: the member's own card, plus the one the next natural draw hands out.
+export const buildCardEmbed = (options: {
+  userId: string;
+  card: WelcomeCard;
+  drawnAt: number;
+  joinedAt?: number;
+  nextCard?: WelcomeCard;
+}): EmbedBuilder => {
+  const { userId, card, drawnAt, joinedAt, nextCard } = options;
+  const drawn = Math.floor(drawnAt / 1000);
+  const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
+  const message = renderWelcomeMessage(card.message, userId);
+  // The card message already mentions the member, no need to say it twice.
+  const header = card.message.includes("{user}") ? "" : `<@${userId}>\n\n`;
+  const embed = new EmbedBuilder()
+    .setColor(getRarityColor(card.rarity))
+    .setTitle(`${getRarityEmoji(card.rarity)} ${getRarityLabel(card.rarity)} welcome card`)
+    .setDescription(`${header}${message}${joined}`)
+    .addFields({
+      name: "Drawn",
+      value: `<t:${drawn}:R>`,
+      inline: true,
+    })
+    .setFooter({ text: "Enjoy Nowly." })
+    .setTimestamp(drawnAt);
+
+  if (nextCard) {
+    embed.addFields({
+      name: "Next in the packet",
+      value: `${getRarityEmoji(nextCard.rarity)} ${nextCard.message.replaceAll("{user}", "you")}`,
+      inline: false,
+    });
+  }
+
+  return embed;
 };

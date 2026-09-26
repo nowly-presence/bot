@@ -86,6 +86,7 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 - `/send channel:<channel>` - write a message as the bot through a modal. Same permission as `/welcome`.
+- `/card` - show your own welcome card as an embed, coloured by rarity, with the card the next natural draw will hand out as a teaser.
 
 ## Greetings
 
@@ -108,6 +109,8 @@ Passing `rarity` to `/welcome` draws from that rarity's pool without consuming t
 When the member has been in the server for more than an hour at that point, the message ends with `(joined <t:...:R>)`, built from `member.joinedAt`, so it reads as "joined 3 days ago" and hovering shows the exact date. That covers every card given through `/welcome` and keeps real arrivals clean.
 
 `joined` overrides it, for members whose real join date is wrong (a leave and rejoin resets it). It takes either a delay (`3d`, `12h`, `2h30m`, `1w`) or an exact date (`2025-06-15`, `15/06/2025`), pinned to midday UTC. An unreadable value or a date in the future is rejected with an error, and the time of day cannot be set.
+
+`/card` reads the pull back and renders it as an embed, so the collection is usable outside the welcome channel: the card message, the join date when the member has been here for more than an hour, when it was drawn, and the next card in the packet. Nothing is consumed by looking, `peekWelcomePacketCard` only reads the head of the packet.
 
 ## Deployment
 

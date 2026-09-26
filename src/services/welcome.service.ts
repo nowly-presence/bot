@@ -25,7 +25,7 @@ const packetNames: WelcomePacketName[] = ["main", "celestial"];
 // message, so it is only added for late welcomes, which is what /welcome is for.
 const joinMentionThreshold = 3600;
 
-const resolveJoinedAt = (member: GuildMember): number | undefined => {
+export const resolveJoinedAt = (member: GuildMember): number | undefined => {
   if (!member.joinedAt) {
     return undefined;
   }
