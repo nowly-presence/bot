@@ -21,4 +21,9 @@ export const slashCommand = new SlashCommandBuilder()
           value: rarity,
         })),
       )
+  )
+  .addStringOption((option) =>
+    option
+      .setName("joined")
+      .setDescription("Force the join date: a delay like 3d or 12h, or a date like 2025-06-15")
   );

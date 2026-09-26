@@ -17,6 +17,21 @@ export type WelcomeGrantResult =
 
 const packetNames: WelcomePacketName[] = ["main", "celestial"];
 
+// A member joining right now does not need a join date in their welcome
+// message, so it is only added for late welcomes, which is what /welcome is for.
+const joinMentionThreshold = 3600;
+
+const resolveJoinedAt = (member: GuildMember): number | undefined => {
+  if (!member.joinedAt) {
+    return undefined;
+  }
+
+  const joinedAt = Math.floor(member.joinedAt.getTime() / 1000);
+  const ageInSeconds = Math.floor(Date.now() / 1000) - joinedAt;
+
+  return ageInSeconds > joinMentionThreshold ? joinedAt : undefined;
+};
+
 class WelcomeServiceClass {
   restorePackets = (): void => {
     restoreWelcomePackets({
@@ -35,6 +50,7 @@ class WelcomeServiceClass {
     member: GuildMember,
     source: WelcomeSource,
     rarity?: WelcomeRarity,
+    forcedJoinedAt?: number,
   ): Promise<WelcomeGrantResult> => {
     if (!env.DISCORD_WELCOME_CHANNEL_ID || !DatabaseService.isConnected()) {
       return { status: "disabled" };
@@ -73,7 +89,9 @@ class WelcomeServiceClass {
         return { status: "failed", pull };
       }
 
-      await channel.send(renderWelcomeCard(card, member.id));
+      await channel.send(
+        renderWelcomeCard(card, member.id, forcedJoinedAt ?? resolveJoinedAt(member)),
+      );
     } catch (error) {
       console.error(`Failed to send welcome card to ${member.user.tag}:`, error);
       return { status: "failed", pull };

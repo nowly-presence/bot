@@ -2,7 +2,7 @@ import { env } from "@/config/env";
 import { WelcomePull } from "@/services/database.service";
 import { WelcomeService } from "@/services/welcome.service";
 import { CommandExecute } from "@/utils/handler/command";
-import { getRarityEmoji, getRarityLabel, isWelcomeRarity } from "@/utils/welcome";
+import { getRarityEmoji, getRarityLabel, isWelcomeRarity, parseJoinedOption, renderJoinedAgo } from "@/utils/welcome";
 import { Client, GuildMember, PermissionFlagsBits } from "discord.js";
 
 const describePull = (pull: WelcomePull): string => {
@@ -61,11 +61,32 @@ export const execute: CommandExecute = async (command) => {
 
   const rarityOption = command.options.getString("rarity");
   const rarity = rarityOption && isWelcomeRarity(rarityOption) ? rarityOption : undefined;
-  const result = await WelcomeService.grantWelcomeCard(member, "command", rarity);
+
+  const joinedOption = command.options.getString("joined");
+  let forcedJoinedAt: number | undefined;
+
+  if (joinedOption) {
+    const parsed = parseJoinedOption(joinedOption);
+
+    if (parsed === null) {
+      await command.reply({
+        content: "I could not read that join date. Try a delay like `3d`, `12h` or `2h30m`, or a date like `2025-06-15`.",
+        flags: ["Ephemeral"],
+      });
+
+      return;
+    }
+
+    forcedJoinedAt = parsed;
+  }
+
+  const result = await WelcomeService.grantWelcomeCard(member, "command", rarity, forcedJoinedAt);
+
+  const joined = forcedJoinedAt ? ` ${renderJoinedAgo(forcedJoinedAt)}` : "";
 
   if (result.status === "posted") {
     await command.reply({
-      content: `Gave ${describePull(result.pull)} to <@${member.id}>. Posted in ${channelMention()}.`,
+      content: `Gave ${describePull(result.pull)} to <@${member.id}>${joined}. Posted in ${channelMention()}.`,
       flags: ["Ephemeral"],
     });
 

@@ -84,7 +84,7 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/support` - open a support ticket
 - `/links` - useful project links
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
-- `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
+- `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 
 ## Welcome cards
 
@@ -97,6 +97,10 @@ Every pull is recorded in SQLite, so a member's card is final: leaving and rejoi
 Both packets are persisted too: `welcome_packets` stores the card ids that are still in each packet, rewritten after every natural draw and reloaded on startup, so a restart or a redeploy resumes the exact same packets. A failed write is logged and the draw still goes through with the in-memory packet. This is the one piece of state that requires the single replica: two bots sharing the file would consume the same packets.
 
 Passing `rarity` to `/welcome` draws from that rarity's pool without consuming the packet, so admin-forced cards do not skew the natural distribution.
+
+When the member has been in the server for more than an hour at that point, the message ends with `(joined <t:...:R>)`, built from `member.joinedAt`, so it reads as "joined 3 days ago" and hovering shows the exact date. That covers every card given through `/welcome` and keeps real arrivals clean.
+
+`joined` overrides it, for members whose real join date is wrong (a leave and rejoin resets it). It takes either a delay (`3d`, `12h`, `2h30m`, `1w`) or an exact date (`2025-06-15`, `15/06/2025`), pinned to midday UTC. An unreadable value or a date in the future is rejected with an error, and the time of day cannot be set.
 
 ## Deployment
 

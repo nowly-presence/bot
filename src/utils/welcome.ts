@@ -123,6 +123,113 @@ export const renderWelcomeMessage = (message: string, userId: string): string =>
   return message.replaceAll("{user}", `<@${userId}>`);
 };
 
-export const renderWelcomeCard = (card: WelcomeCard, userId: string): string => {
-  return `${getRarityEmoji(card.rarity)} ${renderWelcomeMessage(card.message, userId)}`;
+const durationUnits: Record<string, number> = {
+  s: 1,
+  sec: 1,
+  secs: 1,
+  second: 1,
+  seconds: 1,
+  m: 60,
+  min: 60,
+  mins: 60,
+  minute: 60,
+  minutes: 60,
+  h: 3600,
+  hr: 3600,
+  hrs: 3600,
+  hour: 3600,
+  hours: 3600,
+  d: 86400,
+  day: 86400,
+  days: 86400,
+  w: 604800,
+  week: 604800,
+  weeks: 604800,
+};
+
+// Discord's compact duration format (3d, 12h, 2h30m), long unit names accepted
+// too. Returns a delay in seconds, or null if the value is not a delay.
+const parseDelay = (value: string): number | null => {
+  const pattern = /(\d+)([a-z]+)/g;
+  let totalSeconds = 0;
+  let consumed = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(value)) !== null) {
+    const unit = durationUnits[match[2]];
+
+    if (unit === undefined) {
+      return null;
+    }
+
+    totalSeconds += Number(match[1]) * unit;
+    consumed += match[0].length;
+  }
+
+  return consumed === value.length && totalSeconds > 0 ? totalSeconds : null;
+};
+
+// 2025-06-15 or 15/06/2025, pinned to midday UTC so the date never shifts with
+// the reader's timezone. Returns a timestamp in seconds, or null if the value is
+// not a date.
+const parseDate = (value: string): number | null => {
+  const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(value);
+  const dayFirst = /^(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})$/.exec(value);
+
+  const parts = iso
+    ? { year: Number(iso[1]), month: Number(iso[2]), day: Number(iso[3]) }
+    : dayFirst
+      ? { year: Number(dayFirst[3]), month: Number(dayFirst[2]), day: Number(dayFirst[1]) }
+      : null;
+
+  if (!parts) {
+    return null;
+  }
+
+  const timestamp = Date.UTC(parts.year, parts.month - 1, parts.day, 12) / 1000;
+  const date = new Date(timestamp * 1000);
+
+  if (
+    date.getUTCFullYear() !== parts.year
+    || date.getUTCMonth() !== parts.month - 1
+    || date.getUTCDate() !== parts.day
+  ) {
+    return null;
+  }
+
+  return timestamp;
+};
+
+// Reads the `joined` option of /welcome: either a delay from now (3d, 12h,
+// 2h30m) or an exact date (2025-06-15, 15/06/2025). Returns a timestamp in
+// seconds, or null if the value is unreadable or in the future.
+export const parseJoinedOption = (value: string): number | null => {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, "");
+
+  if (!normalized) {
+    return null;
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  const delay = parseDelay(normalized);
+  const timestamp = delay === null ? parseDate(normalized) : now - delay;
+
+  if (timestamp === null || timestamp > now) {
+    return null;
+  }
+
+  return timestamp;
+};
+
+export const renderJoinedAgo = (joinedAt: number): string => `(joined <t:${joinedAt}:R>)`;
+
+export const renderWelcomeCard = (
+  card: WelcomeCard,
+  userId: string,
+  joinedAt?: number,
+): string => {
+  const message = renderWelcomeMessage(card.message, userId);
+  const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
+
+  return `${getRarityEmoji(card.rarity)} ${message}${joined}`;
 };
