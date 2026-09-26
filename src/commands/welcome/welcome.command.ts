@@ -120,6 +120,15 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
+  if (result.status === "no_cards_left") {
+    await command.reply({
+      content: "The welcome deck is empty — all 100 cards have been drawn. No more cards available until new ones are added.",
+      flags: ["Ephemeral"],
+    });
+
+    return;
+  }
+
   if (result.status === "disabled") {
     await command.reply({
       content: "The welcome feature is not configured on this bot, so no card was given.",

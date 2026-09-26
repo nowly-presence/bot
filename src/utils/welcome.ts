@@ -138,21 +138,22 @@ export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void 
   celestialBag = toCards(state.celestial, celestialCards);
 };
 
-export const drawWelcomeCard = (rarity?: WelcomeRarity): WelcomeCard => {
+export const drawWelcomeCard = (rarity?: WelcomeRarity): WelcomeCard | null => {
   if (rarity) {
     return pickOne(welcomeCards.filter((card) => card.rarity === rarity));
   }
 
   if (celestialCards.length > 0 && Math.random() < celestialDrawRate) {
     if (celestialBag.length === 0) {
-      celestialBag = shuffle(celestialCards);
+      // Celestial packet exhausted, fall back to main packet
+    } else {
+      return pickOne(celestialBag.splice(celestialBag.length - 1, 1));
     }
-
-    return pickOne(celestialBag.splice(celestialBag.length - 1, 1));
   }
 
   if (bag.length === 0) {
-    bag = shuffle(packetCards);
+    // Main packet exhausted, no more cards
+    return null;
   }
 
   return pickOne(bag.splice(bag.length - 1, 1));

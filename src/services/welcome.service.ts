@@ -16,6 +16,7 @@ export type WelcomeGrantResult =
   | { status: "restored"; pull: WelcomePull }
   | { status: "lost"; pull: WelcomePull }
   | { status: "already_has_card"; pull: WelcomePull }
+  | { status: "no_cards_left" }
   | { status: "disabled" }
   | { status: "failed"; pull?: WelcomePull };
 
@@ -104,6 +105,10 @@ class WelcomeServiceClass {
     }
 
     const card = drawWelcomeCard(rarity);
+
+    if (!card) {
+      return { status: "no_cards_left" };
+    }
 
     if (!rarity) {
       this.savePackets();
