@@ -42,6 +42,9 @@ const welcomeRarityColors: Record<WelcomeRarity, number> = {
   celestial: 0x62d0ff,
 };
 
+const cardArtUrl = (rarity: WelcomeRarity): string =>
+  `https://cdn.nowly.me/cards/embed_${rarity}.png`;
+
 // 0.1%: far below what a packet can express, since one celestial card in a
 // hundred is a whole percent. Celestial cards are drawn from their own packet
 // on a per-draw roll instead of sitting in the main one, and that packet is
@@ -291,6 +294,7 @@ export const buildCardEmbed = (options: {
   const embed = new EmbedBuilder()
     .setColor(getRarityColor(card.rarity))
     .setTitle(`${getRarityEmoji(card.rarity)} ${getRarityLabel(card.rarity)} welcome card`)
+    .setThumbnail(cardArtUrl(card.rarity))
     .setDescription(`${header}${message}${joined}`)
     .addFields({
       name: "Drawn",
