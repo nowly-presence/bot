@@ -1,7 +1,8 @@
+import { getWelcomeCard } from "@/data/welcome-cards";
 import { DatabaseService } from "@/services/database.service";
 import { resolveJoinedAt } from "@/services/welcome.service";
 import { CommandExecute } from "@/utils/handler/command";
-import { buildCardEmbed, getWelcomeCard } from "@/utils/welcome";
+import { buildCardEmbed } from "@/utils/welcome";
 import { GuildMember } from "discord.js";
 
 export const execute: CommandExecute = async (command) => {
@@ -16,7 +17,7 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
-  const card = getWelcomeCard(pull.cardId);
+  const card = getWelcomeCard(pull.pack, pull.cardId);
 
   if (!card) {
     await command.reply({

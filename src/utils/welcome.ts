@@ -1,8 +1,10 @@
 import {
+  getWelcomePack,
   WelcomeCard,
-  WelcomePacketName,
+  WelcomePackName,
   WelcomeRarity,
-  welcomeCards,
+  welcomePackNames,
+  welcomePacks,
 } from "@/data/welcome-cards";
 import { EmbedBuilder } from "discord.js";
 
@@ -15,13 +17,24 @@ export const welcomeRarities: WelcomeRarity[] = [
   "celestial",
 ];
 
-const welcomeRarityEmojis: Record<WelcomeRarity, string> = {
-  common: "<:card_common:1553405629698150420>",
-  rare: "<:card_rare:1553405634718859357>",
-  epic: "<:card_epic:1553405630981734491>",
-  legendary: "<:card_legendary:1553405632315523174>",
-  mythic: "<:card_mythic:1553405633540259971>",
-  celestial: "<:card_celestial:1553405628091863242>",
+// Nova has no celestial tier, so its record is partial. The genesis emoji is the
+// fallback, which a nova card can never ask for since the pack holds none.
+const welcomeRarityEmojis: Record<WelcomePackName, Partial<Record<WelcomeRarity, string>>> = {
+  genesis: {
+    common: "<:genesis_card_common:1553438193934926007>",
+    rare: "<:genesis_card_rare:1553438200599675062>",
+    epic: "<:genesis_card_epic:1553438195377508552>",
+    legendary: "<:genesis_card_legendary:1553438196992446504>",
+    mythic: "<:genesis_card_mythic:1553438198552727602>",
+    celestial: "<:genesis_card_celestial:1553438192454340738>",
+  },
+  nova: {
+    common: "<:nova_card_common:1553438166294208652>",
+    rare: "<:nova_card_rare:1553438171218321449>",
+    epic: "<:nova_card_epic:1553438167431123014>",
+    legendary: "<:nova_card_legendary:1553438168756260884>",
+    mythic: "<:nova_card_mythic:1553438169934864505>",
+  },
 };
 
 const welcomeRarityLabels: Record<WelcomeRarity, string> = {
@@ -42,36 +55,27 @@ const welcomeRarityColors: Record<WelcomeRarity, number> = {
   celestial: 0xe4f2ff,
 };
 
-const cardArtUrl = (rarity: WelcomeRarity): string =>
-  `https://cdn.nowly.me/cards/embed_${rarity}.png`;
+const cardArtUrl = (card: WelcomeCard): string =>
+  `https://cdn.nowly.me/cards/${card.pack}/embed_${card.rarity}.png`;
 
-// 0.1%: far below what a packet can express, since one celestial card in a
-// hundred is a whole percent. Celestial cards are drawn from their own packet
-// on a per-draw roll instead of sitting in the main one, and that packet is
-// consumed like any other, so a celestial message cannot come up again before
-// the three of them have all been pulled.
-const celestialDrawRate = 0.001;
+const bags = new Map<WelcomePackName, WelcomeCard[]>(
+  welcomePackNames.map((name) => [name, [] as WelcomeCard[]]),
+);
 
-const celestialRarity: WelcomeRarity = "celestial";
+export type WelcomePacketState = Partial<Record<WelcomePackName, number[]>>;
 
-const packetCards = welcomeCards.filter((card) => card.rarity !== celestialRarity);
-const celestialCards = welcomeCards.filter((card) => card.rarity === celestialRarity);
-
-let bag: WelcomeCard[] = [];
-let celestialBag: WelcomeCard[] = [];
-
-export type WelcomePacketState = Record<WelcomePacketName, number[]>;
-
-const toCards = (cardIds: number[] | undefined, pool: WelcomeCard[]): WelcomeCard[] => {
-  if (!cardIds?.length) {
+const toCards = (pack: WelcomePackName, messageIds: number[] | undefined): WelcomeCard[] => {
+  if (!messageIds?.length) {
     return [];
   }
 
-  const cardsById = new Map(pool.map((card) => [card.id, card]));
+  const cards = getWelcomePack(pack)?.cards ?? [];
 
-  return cardIds
-    .map((cardId) => cardsById.get(cardId))
-    .filter((card): card is WelcomeCard => card !== undefined);
+  return messageIds.flatMap((messageId) => {
+    const card = cards.find((entry) => entry.messageId === messageId);
+
+    return card ? [card] : [];
+  });
 };
 
 const pickOne = (cards: WelcomeCard[]): WelcomeCard => {
@@ -84,79 +88,96 @@ const pickOne = (cards: WelcomeCard[]): WelcomeCard => {
   return card;
 };
 
-const shuffle = (cards: WelcomeCard[]): WelcomeCard[] => {
-  const shuffled = [...cards];
-
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const swapIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
-  }
-
-  return shuffled;
-};
-
-export const getRarityEmoji = (rarity: WelcomeRarity): string => welcomeRarityEmojis[rarity];
+export const getRarityEmoji = (pack: WelcomePackName, rarity: WelcomeRarity): string =>
+  welcomeRarityEmojis[pack][rarity] ?? welcomeRarityEmojis.genesis[rarity] ?? "";
 
 export const getRarityLabel = (rarity: WelcomeRarity): string => welcomeRarityLabels[rarity];
 
 export const getRarityColor = (rarity: WelcomeRarity): number => welcomeRarityColors[rarity];
 
+export const getPackLabel = (pack: WelcomePackName): string =>
+  getWelcomePack(pack)?.label ?? pack;
+
 export const isWelcomeRarity = (value: string): value is WelcomeRarity =>
   welcomeRarities.includes(value as WelcomeRarity);
 
-export const getWelcomePacketState = (): WelcomePacketState => ({
-  main: bag.map((card) => card.id),
-  celestial: celestialBag.map((card) => card.id),
-});
+export const getWelcomePacketState = (): Record<WelcomePackName, number[]> =>
+  Object.fromEntries(
+    welcomePackNames.map((name) => [name, (bags.get(name) ?? []).map((card) => card.messageId)]),
+  ) as Record<WelcomePackName, number[]>;
 
-// Takes a card back out of whichever packet holds it, used when a member leaves
-// and their card goes back into the draw. Returns the packet it came from, or
-// null when the card is not in any packet, meaning someone else already drew it.
-export const removeCardFromPackets = (cardId: number): WelcomePacketName | null => {
-  const mainIndex = bag.findIndex((card) => card.id === cardId);
+// The active pack is the first one still holding a card, so a pack takes over as
+// soon as the one before it has been dealt out entirely.
+export const getCurrentPack = (): WelcomePackName | undefined =>
+  welcomePackNames.find((name) => (bags.get(name)?.length ?? 0) > 0);
 
-  if (mainIndex !== -1) {
-    bag.splice(mainIndex, 1);
-    return "main";
+// A member who leaves hands their card back to the pack it came from, so it can
+// be drawn again. Returns false when the pack no longer lists the card, in which
+// case the card is simply gone.
+export const returnCardToPack = (card: WelcomeCard): boolean => {
+  const bag = bags.get(card.pack);
+
+  if (!bag || bag.some((entry) => entry.messageId === card.messageId)) {
+    return false;
   }
 
-  const celestialIndex = celestialBag.findIndex((card) => card.id === cardId);
+  bag.push(card);
 
-  if (celestialIndex !== -1) {
-    celestialBag.splice(celestialIndex, 1);
-    return "celestial";
+  return true;
+};
+
+// A member who comes back takes their card out of the pack again. Returns false
+// when the card is no longer there, meaning somebody else drew it in the meantime.
+export const claimCardFromPack = (
+  pack: WelcomePackName,
+  messageId: number,
+): boolean => {
+  const bag = bags.get(pack);
+  const index = bag?.findIndex((card) => card.messageId === messageId) ?? -1;
+
+  if (!bag || index === -1) {
+    return false;
   }
 
-  return null;
+  bag.splice(index, 1);
+
+  return true;
 };
 
-export const getWelcomeCard = (cardId: number): WelcomeCard | undefined =>
-  welcomeCards.find((card) => card.id === cardId);
+export const restoreWelcomePackets = (state: WelcomePacketState): void => {
+  for (const name of welcomePackNames) {
+    const messageIds = state[name];
 
-export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void => {
-  bag = toCards(state.main, packetCards);
-  celestialBag = toCards(state.celestial, celestialCards);
+    bags.set(
+      name,
+      messageIds?.length
+        ? toCards(name, messageIds)
+        : (getWelcomePack(name)?.cards ?? []).filter((card) => Boolean(card)),
+    );
+  }
 };
 
+// Cards are always taken out of the bag, including when /welcome forces a rarity,
+// so a card is never handed to two members.
 export const drawWelcomeCard = (rarity?: WelcomeRarity): WelcomeCard | null => {
-  if (rarity) {
-    return pickOne(welcomeCards.filter((card) => card.rarity === rarity));
-  }
+  const pack = getCurrentPack();
 
-  if (celestialCards.length > 0 && Math.random() < celestialDrawRate) {
-    if (celestialBag.length === 0) {
-      // Celestial packet exhausted, fall back to main packet
-    } else {
-      return pickOne(celestialBag.splice(celestialBag.length - 1, 1));
-    }
-  }
-
-  if (bag.length === 0) {
-    // Main packet exhausted, no more cards
+  if (pack === undefined) {
     return null;
   }
 
-  return pickOne(bag.splice(bag.length - 1, 1));
+  const bag = bags.get(pack) ?? [];
+  const pool = rarity ? bag.filter((card) => card.rarity === rarity) : bag;
+
+  if (pool.length === 0) {
+    return null;
+  }
+
+  const card = pickOne(pool);
+
+  bag.splice(bag.indexOf(card), 1);
+
+  return card;
 };
 
 export const renderWelcomeMessage = (message: string, userId: string): string => {
@@ -271,10 +292,10 @@ export const renderWelcomeCard = (
   const message = renderWelcomeMessage(card.message, userId);
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
 
-  return `${getRarityEmoji(card.rarity)} ${message}${joined}`;
+  return `${getRarityEmoji(card.pack, card.rarity)} ${message}${joined}`;
 };
 
-// /card: the member's own card, the art and the colour of its rarity.
+// /card: the member's own card, the art and the colour of its pack and rarity.
 export const buildCardEmbed = (options: {
   userId: string;
   card: WelcomeCard;
@@ -283,11 +304,12 @@ export const buildCardEmbed = (options: {
 }): EmbedBuilder => {
   const { userId, card, drawnAt, joinedAt } = options;
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
+  const emoji = getRarityEmoji(card.pack, card.rarity);
 
   return new EmbedBuilder()
     .setColor(getRarityColor(card.rarity))
-    .setTitle(`${getRarityLabel(card.rarity)} welcome card`)
-    .setThumbnail(cardArtUrl(card.rarity))
-    .setDescription(`${getRarityEmoji(card.rarity)} ${renderWelcomeMessage(card.message, userId)}${joined}`)
+    .setTitle(`${getPackLabel(card.pack)} • ${getRarityLabel(card.rarity)} welcome card`)
+    .setThumbnail(cardArtUrl(card))
+    .setDescription(`${emoji} ${renderWelcomeMessage(card.message, userId)}${joined}`)
     .setTimestamp(drawnAt);
 };

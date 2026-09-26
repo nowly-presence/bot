@@ -2,12 +2,12 @@ import { env } from "@/config/env";
 import { WelcomePull } from "@/services/database.service";
 import { WelcomeService } from "@/services/welcome.service";
 import { CommandExecute } from "@/utils/handler/command";
-import { getRarityEmoji, getRarityLabel, isWelcomeRarity, parseJoinedOption, renderJoinedAgo } from "@/utils/welcome";
+import { getPackLabel, getRarityEmoji, getRarityLabel, isWelcomeRarity, parseJoinedOption, renderJoinedAgo } from "@/utils/welcome";
 import { Client, GuildMember, PermissionFlagsBits } from "discord.js";
 
 const describePull = (pull: WelcomePull): string => {
   const drawnAt = Math.floor(pull.drawnAt / 1000);
-  const label = `${getRarityEmoji(pull.rarity)} **${getRarityLabel(pull.rarity)}**`;
+  const label = `${getRarityEmoji(pull.pack, pull.rarity)} **${getPackLabel(pull.pack)} ${getRarityLabel(pull.rarity)}**`;
 
   return `card #${pull.cardId} ${label} drawn <t:${drawnAt}:R>`;
 };
@@ -122,7 +122,7 @@ export const execute: CommandExecute = async (command) => {
 
   if (result.status === "no_cards_left") {
     await command.reply({
-      content: "The welcome deck is empty — all 100 cards have been drawn. No more cards available until new ones are added.",
+      content: "Every welcome card has been drawn. No more cards available until new packs are added.",
       flags: ["Ephemeral"],
     });
 

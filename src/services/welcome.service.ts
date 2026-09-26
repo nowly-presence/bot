@@ -1,13 +1,14 @@
 import { env } from "@/config/env";
-import { WelcomeCard, WelcomePacketName, WelcomeRarity } from "@/data/welcome-cards";
+import { getWelcomeCard, WelcomeCard, WelcomeRarity, welcomePackNames } from "@/data/welcome-cards";
 import { DatabaseService, WelcomePull, WelcomeSource } from "@/services/database.service";
 import {
+  claimCardFromPack,
   drawWelcomeCard,
-  getWelcomeCard,
+  getCurrentPack,
   getWelcomePacketState,
-  removeCardFromPackets,
   renderWelcomeCard,
   restoreWelcomePackets,
+  returnCardToPack,
 } from "@/utils/welcome";
 import { GuildMember } from "discord.js";
 
@@ -19,8 +20,6 @@ export type WelcomeGrantResult =
   | { status: "no_cards_left" }
   | { status: "disabled" }
   | { status: "failed"; pull?: WelcomePull };
-
-const packetNames: WelcomePacketName[] = ["main", "celestial"];
 
 // A member joining right now does not need a join date in their welcome
 // message, so it is only added for late welcomes, which is what /welcome is for.
@@ -39,16 +38,18 @@ export const resolveJoinedAt = (member: GuildMember): number | undefined => {
 
 class WelcomeServiceClass {
   restorePackets = (): void => {
-    restoreWelcomePackets({
-      main: DatabaseService.getWelcomePacket("main"),
-      celestial: DatabaseService.getWelcomePacket("celestial"),
-    });
-
-    const state = getWelcomePacketState();
-
-    console.log(
-      `Welcome packets restored from SQLite: ${state.main.length} card(s) left in the main packet, ${state.celestial.length} celestial card(s) left`,
+    const state = restoreWelcomePackets(
+      Object.fromEntries(
+        welcomePackNames.map((name) => [name, DatabaseService.getWelcomePacket(name)]),
+      ),
     );
+
+    const remaining = getWelcomePacketState();
+    const summary = welcomePackNames
+      .map((name) => `${name}: ${remaining[name].length}`)
+      .join(", ");
+
+    console.log(`Welcome packs restored from SQLite: ${summary}`);
   };
 
   handleMemberLeave = (member: Pick<GuildMember, "id" | "user">): void => {
@@ -62,19 +63,21 @@ class WelcomeServiceClass {
       return;
     }
 
-    const packet = removeCardFromPackets(pull.cardId);
+    const card = getWelcomeCard(pull.pack, pull.cardId);
 
     this.savePackets();
 
-    if (!packet) {
+    if (!card || !returnCardToPack(card)) {
       console.warn(
-        `${member.user.tag} left, card #${pull.cardId} was not in any packet, so nobody can get it back`,
+        `${member.user.tag} left, card #${pull.cardId} is not part of the ${pull.pack} pack anymore, so it is gone for good`,
       );
       return;
     }
 
+    this.savePackets();
+
     console.log(
-      `${member.user.tag} left, card #${pull.cardId} (${pull.rarity}) is back in the ${packet} packet`,
+      `${member.user.tag} left, card #${pull.cardId} (${pull.rarity}) is back in the ${pull.pack} pack`,
     );
   };
 
@@ -110,14 +113,13 @@ class WelcomeServiceClass {
       return { status: "no_cards_left" };
     }
 
-    if (!rarity) {
-      this.savePackets();
-    }
+    this.savePackets();
 
     const pull: WelcomePull = {
       userId: member.id,
-      cardId: card.id,
+      cardId: card.messageId,
       rarity: card.rarity,
+      pack: card.pack,
       source,
       drawnAt: Date.now(),
     };
@@ -139,9 +141,9 @@ class WelcomeServiceClass {
     shouldPost: boolean,
     forcedJoinedAt?: number,
   ): Promise<WelcomeGrantResult> => {
-    const packet = removeCardFromPackets(pull.cardId);
+    const pack = claimCardFromPack(pull.pack, pull.cardId);
 
-    if (!packet) {
+    if (!pack) {
       DatabaseService.deleteVacatedWelcomePull(member.id);
 
       console.log(
@@ -158,10 +160,10 @@ class WelcomeServiceClass {
     DatabaseService.insertWelcomePull(restored);
 
     console.log(
-      `${member.user.tag} came back and got card #${restored.cardId} (${restored.rarity}) back from the ${packet} packet`,
+      `${member.user.tag} came back and got card #${restored.cardId} (${restored.rarity}) back from the ${pull.pack} pack`,
     );
 
-    const card = getWelcomeCard(restored.cardId);
+    const card = getWelcomeCard(restored.pack, restored.cardId);
 
     if (!card || !shouldPost) {
       return { status: "restored", pull: restored };
@@ -203,11 +205,11 @@ class WelcomeServiceClass {
     const state = getWelcomePacketState();
 
     try {
-      for (const name of packetNames) {
+      for (const name of welcomePackNames) {
         DatabaseService.saveWelcomePacket(name, state[name]);
       }
     } catch (error) {
-      console.error("Failed to persist the welcome packets in SQLite:", error);
+      console.error("Failed to persist the welcome packs in SQLite:", error);
     }
   };
 }
