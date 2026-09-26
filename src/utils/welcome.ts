@@ -308,7 +308,7 @@ export const buildCardEmbed = (options: {
 
   return new EmbedBuilder()
     .setColor(getRarityColor(card.rarity))
-    .setTitle(`${getRarityLabel(card.rarity)} card`)
+    .setTitle(`${getRarityLabel(card.rarity)} card (${getPackLabel(card.pack)})`)
     .setImage(cardArtUrl(card))
     .setDescription(`${emoji} ${renderWelcomeMessage(card.message, userId)}${joined}`)
     .setTimestamp(drawnAt);
