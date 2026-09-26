@@ -1,9 +1,11 @@
 import { env } from "@/config/env";
-import { WelcomePacketName, WelcomeRarity } from "@/data/welcome-cards";
+import { WelcomeCard, WelcomePacketName, WelcomeRarity } from "@/data/welcome-cards";
 import { DatabaseService, WelcomePull, WelcomeSource } from "@/services/database.service";
 import {
   drawWelcomeCard,
+  getWelcomeCard,
   getWelcomePacketState,
+  removeCardFromPackets,
   renderWelcomeCard,
   restoreWelcomePackets,
 } from "@/utils/welcome";
@@ -11,6 +13,8 @@ import { GuildMember } from "discord.js";
 
 export type WelcomeGrantResult =
   | { status: "posted"; pull: WelcomePull }
+  | { status: "restored"; pull: WelcomePull }
+  | { status: "lost"; pull: WelcomePull }
   | { status: "already_has_card"; pull: WelcomePull }
   | { status: "disabled" }
   | { status: "failed"; pull?: WelcomePull };
@@ -46,6 +50,33 @@ class WelcomeServiceClass {
     );
   };
 
+  handleMemberLeave = (member: Pick<GuildMember, "id" | "user">): void => {
+    if (!DatabaseService.isConnected()) {
+      return;
+    }
+
+    const pull = DatabaseService.vacateWelcomePull(member.id);
+
+    if (!pull) {
+      return;
+    }
+
+    const packet = removeCardFromPackets(pull.cardId);
+
+    this.savePackets();
+
+    if (!packet) {
+      console.warn(
+        `${member.user.tag} left, card #${pull.cardId} was not in any packet, so nobody can get it back`,
+      );
+      return;
+    }
+
+    console.log(
+      `${member.user.tag} left, card #${pull.cardId} (${pull.rarity}) is back in the ${packet} packet`,
+    );
+  };
+
   grantWelcomeCard = async (
     member: GuildMember,
     source: WelcomeSource,
@@ -60,6 +91,16 @@ class WelcomeServiceClass {
 
     if (existing) {
       return { status: "already_has_card", pull: existing };
+    }
+
+    const vacated = DatabaseService.getVacatedWelcomePull(member.id);
+
+    if (vacated && !rarity) {
+      return this.restoreVacatedPull(member, vacated, source === "command", forcedJoinedAt);
+    }
+
+    if (vacated) {
+      DatabaseService.deleteVacatedWelcomePull(member.id);
     }
 
     const card = drawWelcomeCard(rarity);
@@ -81,23 +122,76 @@ class WelcomeServiceClass {
       return conflict ? { status: "already_has_card", pull: conflict } : { status: "failed" };
     }
 
-    try {
-      const channel = await member.guild.channels.fetch(env.DISCORD_WELCOME_CHANNEL_ID);
+    return this.post(member, card, forcedJoinedAt, { status: "posted", pull });
+  };
 
-      if (!channel?.isSendable()) {
-        console.error(`Welcome channel ${env.DISCORD_WELCOME_CHANNEL_ID} is not sendable`);
-        return { status: "failed", pull };
-      }
+  // A member who left and came back gets their card back when nobody else drew
+  // it in the meantime. When somebody did, they are out: no re-roll. A natural
+  // rejoin stays silent, /welcome posts it like any other card.
+  private restoreVacatedPull = async (
+    member: GuildMember,
+    pull: WelcomePull,
+    shouldPost: boolean,
+    forcedJoinedAt?: number,
+  ): Promise<WelcomeGrantResult> => {
+    const packet = removeCardFromPackets(pull.cardId);
 
-      await channel.send(
-        renderWelcomeCard(card, member.id, forcedJoinedAt ?? resolveJoinedAt(member)),
+    if (!packet) {
+      DatabaseService.deleteVacatedWelcomePull(member.id);
+
+      console.log(
+        `${member.user.tag} came back, but card #${pull.cardId} (${pull.rarity}) was drawn by someone else while they were gone`,
       );
-    } catch (error) {
-      console.error(`Failed to send welcome card to ${member.user.tag}:`, error);
-      return { status: "failed", pull };
+
+      return { status: "lost", pull };
     }
 
-    return { status: "posted", pull };
+    this.savePackets();
+    DatabaseService.deleteVacatedWelcomePull(member.id);
+
+    const restored: WelcomePull = { ...pull, source: shouldPost ? pull.source : "rejoin" };
+    DatabaseService.insertWelcomePull(restored);
+
+    console.log(
+      `${member.user.tag} came back and got card #${restored.cardId} (${restored.rarity}) back from the ${packet} packet`,
+    );
+
+    const card = getWelcomeCard(restored.cardId);
+
+    if (!card || !shouldPost) {
+      return { status: "restored", pull: restored };
+    }
+
+    return this.post(member, card, forcedJoinedAt, { status: "restored", pull: restored });
+  };
+
+  private post = async (
+    member: GuildMember,
+    card: WelcomeCard,
+    forcedJoinedAt: number | undefined,
+    result: { status: "posted" | "restored"; pull: WelcomePull },
+  ): Promise<WelcomeGrantResult> => {
+    const channelId = env.DISCORD_WELCOME_CHANNEL_ID;
+
+    if (!channelId) {
+      return { status: "disabled" };
+    }
+
+    try {
+      const channel = await member.guild.channels.fetch(channelId);
+
+      if (!channel?.isSendable()) {
+        console.error(`Welcome channel ${channelId} is not sendable`);
+        return { status: "failed", pull: result.pull };
+      }
+
+      await channel.send(renderWelcomeCard(card, member.id, forcedJoinedAt ?? resolveJoinedAt(member)));
+    } catch (error) {
+      console.error(`Failed to send welcome card to ${member.user.tag}:`, error);
+      return { status: "failed", pull: result.pull };
+    }
+
+    return result;
   };
 
   private savePackets = (): void => {

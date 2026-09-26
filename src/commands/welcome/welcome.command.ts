@@ -102,6 +102,24 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
+  if (result.status === "restored") {
+    await command.reply({
+      content: `Gave ${describePull(result.pull)} back to <@${member.id}>${joined}, nobody else had drawn it. Posted in ${channelMention()}.`,
+      flags: ["Ephemeral"],
+    });
+
+    return;
+  }
+
+  if (result.status === "lost") {
+    await command.reply({
+      content: `<@${member.id}> had ${describePull(result.pull)}, but it was drawn by someone else while they were away. No re-roll, so nothing was given.`,
+      flags: ["Ephemeral"],
+    });
+
+    return;
+  }
+
   if (result.status === "disabled") {
     await command.reply({
       content: "The welcome feature is not configured on this bot, so no card was given.",

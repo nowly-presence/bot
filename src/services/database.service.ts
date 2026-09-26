@@ -5,7 +5,7 @@ import { mkdirSync } from "fs";
 import { DatabaseSync, StatementSync } from "node:sqlite";
 import { dirname } from "path";
 
-export type WelcomeSource = "join" | "command";
+export type WelcomeSource = "join" | "command" | "rejoin";
 
 export type WelcomePull = {
   userId: string;
@@ -25,6 +25,20 @@ type WelcomePullRow = {
 
 type WelcomePacketRow = {
   card_ids: string;
+};
+
+const toWelcomePull = (row: WelcomePullRow | undefined): WelcomePull | undefined => {
+  if (!row || !isWelcomeRarity(row.rarity)) {
+    return undefined;
+  }
+
+  return {
+    userId: row.user_id,
+    cardId: row.card_id,
+    rarity: row.rarity,
+    source: row.source as WelcomeSource,
+    drawnAt: row.drawn_at,
+  };
 };
 
 class DatabaseServiceClass {
@@ -48,17 +62,48 @@ class DatabaseServiceClass {
       "SELECT user_id, card_id, rarity, source, drawn_at FROM welcome_pulls WHERE user_id = ?",
     ).get(userId) as WelcomePullRow | undefined;
 
-    if (!row || !isWelcomeRarity(row.rarity)) {
+    return toWelcomePull(row);
+  };
+
+  // A vacated pull is the card a member held before leaving. It is kept aside so
+  // a rejoin can hand the same card back, as long as nobody else drew it.
+  getVacatedWelcomePull = (userId: string): WelcomePull | undefined => {
+    const row = this.prepare(`
+      SELECT user_id, card_id, rarity, source, drawn_at
+      FROM welcome_vacated_pulls
+      WHERE user_id = ?
+    `).get(userId) as WelcomePullRow | undefined;
+
+    return toWelcomePull(row);
+  };
+
+  vacateWelcomePull = (userId: string): WelcomePull | undefined => {
+    const pull = this.getWelcomePull(userId);
+
+    if (!pull) {
       return undefined;
     }
 
-    return {
-      userId: row.user_id,
-      cardId: row.card_id,
-      rarity: row.rarity,
-      source: row.source as WelcomeSource,
-      drawnAt: row.drawn_at,
-    };
+    // Inserted before the delete, so a failure leaves the pull active rather
+    // than losing it.
+    this.prepare(`
+      INSERT INTO welcome_vacated_pulls (user_id, card_id, rarity, source, drawn_at, vacated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON CONFLICT (user_id) DO UPDATE SET
+        card_id = excluded.card_id,
+        rarity = excluded.rarity,
+        source = excluded.source,
+        drawn_at = excluded.drawn_at,
+        vacated_at = excluded.vacated_at
+    `).run(pull.userId, pull.cardId, pull.rarity, pull.source, pull.drawnAt, Date.now());
+
+    this.prepare("DELETE FROM welcome_pulls WHERE user_id = ?").run(userId);
+
+    return pull;
+  };
+
+  deleteVacatedWelcomePull = (userId: string): void => {
+    this.prepare("DELETE FROM welcome_vacated_pulls WHERE user_id = ?").run(userId);
   };
 
   insertWelcomePull = (pull: WelcomePull): boolean => {
@@ -140,6 +185,17 @@ class DatabaseServiceClass {
           card_ids TEXT NOT NULL,
           updated_at INTEGER NOT NULL,
           PRIMARY KEY (name)
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS welcome_vacated_pulls (
+          user_id TEXT NOT NULL,
+          card_id INTEGER NOT NULL,
+          rarity TEXT NOT NULL,
+          source TEXT NOT NULL,
+          drawn_at INTEGER NOT NULL,
+          vacated_at INTEGER NOT NULL,
+          PRIMARY KEY (user_id)
         ) STRICT
       `);
 

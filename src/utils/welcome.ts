@@ -94,6 +94,30 @@ export const getWelcomePacketState = (): WelcomePacketState => ({
   celestial: celestialBag.map((card) => card.id),
 });
 
+// Takes a card back out of whichever packet holds it, used when a member leaves
+// and their card goes back into the draw. Returns the packet it came from, or
+// null when the card is not in any packet, meaning someone else already drew it.
+export const removeCardFromPackets = (cardId: number): WelcomePacketName | null => {
+  const mainIndex = bag.findIndex((card) => card.id === cardId);
+
+  if (mainIndex !== -1) {
+    bag.splice(mainIndex, 1);
+    return "main";
+  }
+
+  const celestialIndex = celestialBag.findIndex((card) => card.id === cardId);
+
+  if (celestialIndex !== -1) {
+    celestialBag.splice(celestialIndex, 1);
+    return "celestial";
+  }
+
+  return null;
+};
+
+export const getWelcomeCard = (cardId: number): WelcomeCard | undefined =>
+  welcomeCards.find((card) => card.id === cardId);
+
 export const restoreWelcomePackets = (state: Partial<WelcomePacketState>): void => {
   bag = toCards(state.main, packetCards);
   celestialBag = toCards(state.celestial, celestialCards);
