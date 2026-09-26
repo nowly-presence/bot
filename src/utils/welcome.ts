@@ -1,13 +1,21 @@
 import { WelcomeCard, WelcomeRarity, welcomeCards } from "@/data/welcome-cards";
 
-export const welcomeRarities: WelcomeRarity[] = ["common", "rare", "epic", "legendary", "mythic"];
+export const welcomeRarities: WelcomeRarity[] = [
+  "common",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
+  "celestial",
+];
 
 const welcomeRarityEmojis: Record<WelcomeRarity, string> = {
-  common: "<:card_common:1553393881490391290>",
-  rare: "<:card_rare:1553393887660347443>",
-  epic: "<:card_epic:1553393882966921246>",
-  legendary: "<:card_legendary:1553393884581728329>",
-  mythic: "<:card_mythic:1553393886070579200>",
+  common: "<:card_common:1553405629698150420>",
+  rare: "<:card_rare:1553405634718859357>",
+  epic: "<:card_epic:1553405630981734491>",
+  legendary: "<:card_legendary:1553405632315523174>",
+  mythic: "<:card_mythic:1553405633540259971>",
+  celestial: "<:card_celestial:1553405628091863242>",
 };
 
 const welcomeRarityLabels: Record<WelcomeRarity, string> = {
@@ -16,7 +24,18 @@ const welcomeRarityLabels: Record<WelcomeRarity, string> = {
   epic: "Epic",
   legendary: "Legendary",
   mythic: "Mythic",
+  celestial: "Celestial",
 };
+
+// 0.1%: far below what a packet can express, since one celestial card in a
+// hundred is a whole percent. Celestial cards are drawn from their own pool on
+// a per-draw roll instead of sitting in the packet.
+const celestialDrawRate = 0.001;
+
+const celestialRarity: WelcomeRarity = "celestial";
+
+const packetCards = welcomeCards.filter((card) => card.rarity !== celestialRarity);
+const celestialCards = welcomeCards.filter((card) => card.rarity === celestialRarity);
 
 let bag: WelcomeCard[] = [];
 
@@ -53,8 +72,12 @@ export const drawWelcomeCard = (rarity?: WelcomeRarity): WelcomeCard => {
     return pickOne(welcomeCards.filter((card) => card.rarity === rarity));
   }
 
+  if (celestialCards.length > 0 && Math.random() < celestialDrawRate) {
+    return pickOne(celestialCards);
+  }
+
   if (bag.length === 0) {
-    bag = shuffle(welcomeCards);
+    bag = shuffle(packetCards);
   }
 
   return pickOne(bag.splice(bag.length - 1, 1));

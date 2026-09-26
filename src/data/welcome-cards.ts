@@ -1,4 +1,10 @@
-export type WelcomeRarity = "common" | "rare" | "epic" | "legendary" | "mythic";
+export type WelcomeRarity =
+  | "common"
+  | "rare"
+  | "epic"
+  | "legendary"
+  | "mythic"
+  | "celestial";
 
 export type WelcomeCard = {
   id: number;
@@ -506,5 +512,20 @@ export const welcomeCards: WelcomeCard[] = [
     id: 100,
     rarity: "mythic",
     message: "MYTHIC. {user} just walked in. This is not a drill.",
+  },
+  {
+    id: 101,
+    rarity: "celestial",
+    message: "{user} didn't just join. The stars lined up, and they lined up loudly.",
+  },
+  {
+    id: 102,
+    rarity: "celestial",
+    message: "Celestial pull. {user} has arrived, and the universe took notes.",
+  },
+  {
+    id: 103,
+    rarity: "celestial",
+    message: "Stop the server. {user} is CELESTIAL. This happens about once every thousand draws.",
   },
 ];

@@ -84,11 +84,13 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/support` - open a support ticket
 - `/links` - useful project links
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
-- `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
+- `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 
 ## Welcome cards
 
-When a member joins, the bot draws one of 100 cards and posts it as a plain text message in `DISCORD_WELCOME_CHANNEL_ID`, prefixed with a rarity emoji. Cards are distributed like a real card game: the rarity is baked into each card, the draw is uniform, and the deck is shuffled into a "packet" that is consumed one card at a time and reshuffled when empty, so the same message never appears twice in a row. That yields an emergent 50% common / 27% rare / 15% epic / 6% legendary / 2% mythic split rather than a hardcoded weight table.
+When a member joins, the bot draws one of 103 cards and posts it as a plain text message in `DISCORD_WELCOME_CHANNEL_ID`, prefixed with a rarity emoji. Cards are distributed like a real card game: the rarity is baked into each card, the draw is uniform, and the deck is shuffled into a "packet" that is consumed one card at a time and reshuffled when empty, so the same message never appears twice in a row. That yields an emergent 50% common / 27% rare / 15% epic / 6% legendary / 2% mythic split rather than a hardcoded weight table.
+
+Celestial is the exception: 0.1% is below what a packet can express (a single celestial card in a hundred is a whole percent), so the three celestial cards are kept out of the packet and drawn from their own pool on a per-draw roll (`celestialDrawRate` in `src/utils/welcome.ts`). A celestial hit does not consume a packet card, so the split above stays intact.
 
 Every pull is recorded in SQLite, so a member's card is final: leaving and rejoining never re-rolls it. The `user_id` primary key enforces this in the database, not just in application code. A member who leaves and rejoins with the same account is therefore skipped.
 
