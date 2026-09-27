@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 import { DatabaseService } from "@/services/database.service";
-import { Client, TextChannel } from "discord.js";
+import { Client } from "discord.js";
 
 type FeedItem = {
   id: string;
@@ -197,8 +197,8 @@ class XFeedServiceClass {
 
     const channel = await client.channels.fetch(env.DISCORD_X_FEED_CHANNEL_ID);
 
-    if (!(channel instanceof TextChannel)) {
-      throw new Error(`Discord channel ${env.DISCORD_X_FEED_CHANNEL_ID} is not a text channel`);
+    if (!channel?.isSendable()) {
+      throw new Error(`Discord channel ${env.DISCORD_X_FEED_CHANNEL_ID} is not sendable`);
     }
 
     await channel.send({
@@ -290,8 +290,8 @@ class XFeedServiceClass {
       const channel = await client.channels.fetch(env.DISCORD_X_FEED_CHANNEL_ID);
       const username = getAccountUsername();
 
-      if (!(channel instanceof TextChannel)) {
-        throw new Error(`Discord channel ${env.DISCORD_X_FEED_CHANNEL_ID} is not a text channel`);
+      if (!channel?.isSendable()) {
+        throw new Error(`Discord channel ${env.DISCORD_X_FEED_CHANNEL_ID} is not sendable`);
       }
 
       if (!DatabaseService.hasInitializedXFeed()) {
@@ -312,7 +312,7 @@ class XFeedServiceClass {
       }
 
       if (newItems.length > 0) {
-        console.log(`Posted ${newItems.length} new X post(s) to #${channel.name}`);
+        console.log(`Posted ${newItems.length} new X post(s) to channel ${env.DISCORD_X_FEED_CHANNEL_ID}`);
       }
       return newItems.length;
     } catch (error) {
