@@ -85,7 +85,7 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/links` - useful project links
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
-- `/send channel:<channel>` - write a message as the bot through a modal. Same permission as `/welcome`.
+- `/send channel:<channel> [attachment:<file>] [color:<hex>] [embed:<true|false>]` - write a message as the bot through a modal, optionally attach a file, set an embed color, or send an embed. Embed mode adds an optional title input and displays an attached image inside the embed. Same permission as `/welcome`.
 - `/card` - show your own welcome card as an embed, with the pack and rarity it came from.
 
 ## Greetings

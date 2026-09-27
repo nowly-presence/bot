@@ -43,5 +43,32 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
-  await command.showModal(createSendModal(channel.id));
+  const attachment = command.options.getAttachment("attachment");
+  const colorInput = command.options.getString("color")?.trim();
+  const colorValue = colorInput?.replace(/^#/, "");
+
+  if (colorValue && !/^[\da-f]{6}$/i.test(colorValue)) {
+    await command.reply({
+      content: "The color must be a hex value such as #62D0FF.",
+      flags: ["Ephemeral"],
+    });
+    return;
+  }
+
+  const embed = command.options.getBoolean("embed") ?? false;
+
+  if (embed && attachment && !attachment.contentType?.startsWith("image/")) {
+    await command.reply({
+      content: "An attachment in an embed must be an image.",
+      flags: ["Ephemeral"],
+    });
+    return;
+  }
+
+  await command.showModal(createSendModal({
+    channelId: channel.id,
+    attachment: attachment ? { url: attachment.url, name: attachment.name } : undefined,
+    color: colorValue ? Number.parseInt(colorValue, 16) : undefined,
+    embed,
+  }));
 };
