@@ -1,18 +1,18 @@
-import { env } from "@/config/env";
 import { DatabaseService } from "@/services/database.service";
-import { XFeedService } from "@/services/x-feed.service";
+import { SocialFeedService, Social } from "@/services/social-feed.service";
 import { CommandExecute } from "@/utils/handler/command";
 import { PermissionFlagsBits } from "discord.js";
 
 export const execute: CommandExecute = async (command) => {
   if (!command.memberPermissions?.has(PermissionFlagsBits.ManageRoles)) {
     await command.reply({
-      content: "You need the Manage Roles permission to schedule an X feed refresh.",
+      content: "You need the Manage Roles permission to schedule a social feed refresh.",
       flags: ["Ephemeral"],
     });
     return;
   }
 
+  const social = command.options.getString("social", true) as Social;
   const scheduledTime = command.options.getString("heure", true);
   const match = scheduledTime.match(/^(\d{2}):(\d{2})$/);
   const hour = match ? Number(match[1]) : -1;
@@ -34,17 +34,19 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
-  if (!env.X_RSS_POLL_URL || !env.X_RSS_POLL_TOKEN) {
+  try {
+    SocialFeedService.assertSocialConfigured(social);
+  } catch (error) {
     await command.reply({
-      content: "The schedule could not be enabled because the feed endpoint or token is missing.",
+      content: error instanceof Error ? error.message : "The social network is not configured.",
       flags: ["Ephemeral"],
     });
     return;
   }
 
-  XFeedService.setSchedule(scheduledTime);
+  SocialFeedService.setSchedule(social, scheduledTime);
   await command.reply({
-    content: `Feed refresh scheduled daily at **${scheduledTime} Europe/Paris**.`,
+    content: `${social} feed refresh scheduled daily at **${scheduledTime} Europe/Paris**.`,
     flags: ["Ephemeral"],
   });
 };

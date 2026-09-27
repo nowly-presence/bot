@@ -23,9 +23,10 @@ Read once at startup by `src/config/env.ts`. Anything marked required throws at 
 | `DISCORD_SUPPORT_CHANNEL_ID` | no | `1516932454848401599` | Channel where the support ticket panel is posted |
 | `DISCORD_TICKET_CATEGORY_ID` | no | `1516932920361750781` | Category new ticket channels are created under |
 | `DISCORD_WELCOME_CHANNEL_ID` | no | none | Channel where welcome cards are posted. Welcome cards are disabled entirely when unset |
-| `DISCORD_X_FEED_CHANNEL_ID` | no | `1553582467234136114` | Channel where new posts from @nowlyme are published |
-| `X_RSS_FEED_URL` | no | none | Private RSS feed URL polled every 15 seconds; include `include_replies=false` to exclude replies |
-| `X_RSS_POLL_URL` | no | none | Private cache-refresh endpoint used by `/x clear` and the configured daily schedule |
+| `DISCORD_X_FEED_CHANNEL_ID` | no | `1553582467234136114` | Channel where new X posts are published |
+| `DISCORD_BLUESKY_FEED_CHANNEL_ID` | no | none | Optional channel where new Bluesky posts are published |
+| `SOCIAL_FEED_URL` | no | none | Private combined XML RSS URL containing `usernames=...` for X and optionally `bluesky=...` for Bluesky; polled every 15 seconds |
+| `X_RSS_POLL_URL` | no | none | Private cache-refresh endpoint used by `/social clear` and configured daily schedules |
 | `X_RSS_POLL_TOKEN` | no | none | Secret sent in the `X-RSS-Poll-Token` header; set it in the runtime environment, not in source control |
 | `DISCORD_DB_PATH` | no | `./.data/discord.sqlite` | SQLite file. Set to `/data/discord.sqlite` in Docker |
 | `DISCORD_AUTO_REGISTER_COMMANDS` | no | `true` | Registers slash commands on startup. Only the exact string `false` disables it |
@@ -64,8 +65,8 @@ src/
     status/
     support/
     welcome/
-    x/
-      x.builder.ts
+    social/
+      social.builder.ts
       [sub-commands]/
         clear.command.ts
         post.command.ts
@@ -76,7 +77,7 @@ src/
     database.service.ts             # node:sqlite, persists welcome pulls
     ticket.service.ts
     welcome.service.ts              # draws and posts cards
-    x-feed.service.ts               # polls @nowlyme's RSS feed and handles scheduled cache refreshes
+    social-feed.service.ts          # polls X/Bluesky feeds and handles scheduled cache refreshes
   utils/
     welcome.ts                      # pack bags, sequential draw, message rendering
     handler/
@@ -86,7 +87,7 @@ src/
 
 Commands are discovered by folder convention: each `commands/<name>` folder has a `<name>.builder.ts`; standalone commands also have a `<name>.command.ts`, while commands with subcommands put their handlers in `[sub-commands]/`.
 
-On the first successful RSS poll, all posts already present in the feed are recorded as seen without being sent. Later polls only publish unseen posts. `/x post` also records its post ID as seen, so regular feed polling will not send it twice.
+On the first successful poll for each configured social network, existing posts are recorded as seen without being sent. Later polls only publish unseen posts. Manually published posts are also recorded to prevent automatic duplicates. Published messages receive the server's like and repost reactions.
 
 ## Commands
 
@@ -97,9 +98,9 @@ On the first successful RSS poll, all posts already present in the feed are reco
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 - `/send channel:<channel> [attachment:<file>] [color:<hex>] [embed:<true|false>]` - write a message as the bot through a modal, optionally attach a file, set an embed color, or send an embed. Embed mode adds an optional title input and displays an attached image inside the embed. Same permission as `/welcome`.
-- `/x clear` - force-refresh the feed cache through its protected poll endpoint, then immediately publish any new posts. Requires Manage Roles and `X_RSS_POLL_TOKEN`.
-- `/x post url:<url>` - manually publish a post from the tracked account and mark its ID as sent so feed polling will not duplicate it. Requires Manage Roles.
-- `/x schedule heure:<HH:MM>` - schedule a daily forced feed refresh at the selected Europe/Paris time. Requires Manage Roles. The schedule is stored in SQLite.
+- `/social clear social:<x|bluesky>` - force-refresh the selected feed and publish any new posts. Requires Manage Roles and `X_RSS_POLL_TOKEN`.
+- `/social post social:<x|bluesky> url:<url>` - manually publish a post from the selected account. It is recorded to prevent automatic duplicates. Requires Manage Roles.
+- `/social schedule social:<x|bluesky> heure:<HH:MM>` - schedule a daily forced feed refresh at the selected Europe/Paris time. Requires Manage Roles. Schedules are stored in SQLite per network.
 - `/card` - show your own welcome card as an embed, with the pack and rarity it came from.
 
 ## Greetings

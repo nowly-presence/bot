@@ -175,20 +175,21 @@ class DatabaseServiceClass {
     return row !== undefined;
   };
 
-  hasInitializedXFeed = (): boolean => {
-    const row = this.prepare("SELECT initialized FROM x_feed_state WHERE id = 1").get() as
+  hasInitializedSocialFeed = (social: "x" | "bluesky"): boolean => {
+    const row = this.prepare("SELECT initialized FROM social_feed_states WHERE social = ?")
+      .get(social) as
       | { initialized: number }
       | undefined;
 
     return row?.initialized === 1;
   };
 
-  markXFeedInitialized = (): void => {
+  markSocialFeedInitialized = (social: "x" | "bluesky"): void => {
     this.prepare(`
-      INSERT INTO x_feed_state (id, initialized, updated_at)
-      VALUES (1, 1, ?)
-      ON CONFLICT (id) DO UPDATE SET initialized = 1, updated_at = excluded.updated_at
-    `).run(Date.now());
+      INSERT INTO social_feed_states (social, initialized, updated_at)
+      VALUES (?, 1, ?)
+      ON CONFLICT (social) DO UPDATE SET initialized = 1, updated_at = excluded.updated_at
+    `).run(social, Date.now());
   };
 
   markXFeedItemSeen = (itemId: string): void => {
@@ -196,22 +197,23 @@ class DatabaseServiceClass {
       .run(itemId, Date.now());
   };
 
-  getXFeedSchedule = (): string | undefined => {
-    const row = this.prepare("SELECT scheduled_time FROM x_feed_schedule WHERE id = 1").get() as
+  getSocialFeedSchedule = (social: "x" | "bluesky"): string | undefined => {
+    const row = this.prepare("SELECT scheduled_time FROM social_feed_schedules WHERE social = ?")
+      .get(social) as
       | { scheduled_time: string }
       | undefined;
 
     return row?.scheduled_time;
   };
 
-  saveXFeedSchedule = (scheduledTime: string): void => {
+  saveSocialFeedSchedule = (social: "x" | "bluesky", scheduledTime: string): void => {
     this.prepare(`
-      INSERT INTO x_feed_schedule (id, scheduled_time, updated_at)
-      VALUES (1, ?, ?)
-      ON CONFLICT (id) DO UPDATE SET
+      INSERT INTO social_feed_schedules (social, scheduled_time, updated_at)
+      VALUES (?, ?, ?)
+      ON CONFLICT (social) DO UPDATE SET
         scheduled_time = excluded.scheduled_time,
         updated_at = excluded.updated_at
-    `).run(scheduledTime, Date.now());
+    `).run(social, scheduledTime, Date.now());
   };
 
   private prepare = (sql: string): StatementSync => {
@@ -330,6 +332,13 @@ class DatabaseServiceClass {
         ) STRICT
       `);
       database.exec(`
+        CREATE TABLE IF NOT EXISTS social_feed_schedules (
+          social TEXT NOT NULL PRIMARY KEY CHECK (social IN ('x', 'bluesky')),
+          scheduled_time TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        ) STRICT
+      `);
+      database.exec(`
         CREATE TABLE IF NOT EXISTS x_feed_schedule (
           id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
           scheduled_time TEXT NOT NULL,
@@ -343,6 +352,41 @@ class DatabaseServiceClass {
           updated_at INTEGER NOT NULL
         ) STRICT
       `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS social_feed_states (
+          social TEXT NOT NULL PRIMARY KEY CHECK (social IN ('x', 'bluesky')),
+          initialized INTEGER NOT NULL CHECK (initialized IN (0, 1)),
+          updated_at INTEGER NOT NULL
+        ) STRICT
+      `);
+
+      const legacyXSchedule = database
+        .prepare("SELECT scheduled_time, updated_at FROM x_feed_schedule WHERE id = 1")
+        .get() as { scheduled_time: string; updated_at: number } | undefined;
+
+      if (legacyXSchedule) {
+        database
+          .prepare(`
+            INSERT INTO social_feed_schedules (social, scheduled_time, updated_at)
+            VALUES ('x', ?, ?)
+            ON CONFLICT (social) DO NOTHING
+          `)
+          .run(legacyXSchedule.scheduled_time, legacyXSchedule.updated_at);
+      }
+
+      const legacyXState = database
+        .prepare("SELECT initialized, updated_at FROM x_feed_state WHERE id = 1")
+        .get() as { initialized: number; updated_at: number } | undefined;
+
+      if (legacyXState?.initialized === 1) {
+        database
+          .prepare(`
+            INSERT INTO social_feed_states (social, initialized, updated_at)
+            VALUES ('x', 1, ?)
+            ON CONFLICT (social) DO NOTHING
+          `)
+          .run(legacyXState.updated_at);
+      }
 
       this.addMissingPackColumns(database);
       this.mergeLegacyPackets(database);
