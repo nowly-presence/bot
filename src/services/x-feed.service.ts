@@ -154,7 +154,7 @@ class XFeedServiceClass {
     return { username, items: polled.items, posted };
   };
 
-  postManually = async (client: Client<true>, tweetUrl: string): Promise<boolean> => {
+  postManually = async (client: Client<true>, tweetUrl: string): Promise<void> => {
     const username = getAccountUsername();
     let url: URL;
 
@@ -175,10 +175,6 @@ class XFeedServiceClass {
 
     if (postUsername.toLowerCase() !== username.toLowerCase()) {
       throw new Error(`This feed tracks @${username}; the URL belongs to @${postUsername}`);
-    }
-
-    if (DatabaseService.hasSeenXFeedItem(tweetId)) {
-      return false;
     }
 
     const canonicalUrl = `https://x.com/${username}/status/${tweetId}`;
@@ -206,8 +202,6 @@ class XFeedServiceClass {
       allowedMentions: { parse: [] },
     });
     DatabaseService.markXFeedItemSeen(tweetId);
-
-    return true;
   };
 
   private callPollApi = async (body: { usernames: string[] } | { post: string }): Promise<PollApiResponse> => {

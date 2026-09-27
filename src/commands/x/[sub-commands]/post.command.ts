@@ -14,16 +14,12 @@ export const execute: CommandExecute = async (command) => {
   await command.deferReply({ flags: ["Ephemeral"] });
 
   try {
-    const posted = await XFeedService.postManually(
+    await XFeedService.postManually(
       command.client,
       command.options.getString("url", true),
     );
 
-    await command.editReply(
-      posted
-        ? "The post was published and marked as sent."
-        : "This post has already been published; it was not sent again.",
-    );
+    await command.editReply("The post was published and marked as sent.");
   } catch (error) {
     console.error("Manual X post failed:", error);
     await command.editReply(
