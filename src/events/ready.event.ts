@@ -1,6 +1,7 @@
 import { DatabaseService } from "@/services/database.service";
 import { GuildGuardService } from "@/services/guild-guard.service";
 import { TicketService } from "@/services/ticket.service";
+import { XFeedService } from "@/services/x-feed.service";
 import { WelcomeService } from "@/services/welcome.service";
 import { load as loadCommands } from "@/utils/handler/command";
 import { listener, register } from "@/utils/handler/command/command";
@@ -23,6 +24,10 @@ const event: Event<Events.ClientReady> = {
       WelcomeService.restorePackets();
     } catch (error) {
       console.error("Failed to open the SQLite database, welcome cards are disabled:", error);
+    }
+
+    if (DatabaseService.isConnected()) {
+      XFeedService.start(client);
     }
 
     const { commands, autocompletes, builders } = await loadCommands(`${__dirname}${sep}..${sep}commands`);

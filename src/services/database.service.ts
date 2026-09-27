@@ -169,6 +169,51 @@ class DatabaseServiceClass {
     `).run(name, JSON.stringify(cardIds), Date.now());
   };
 
+  hasSeenXFeedItem = (itemId: string): boolean => {
+    const row = this.prepare("SELECT item_id FROM x_feed_items WHERE item_id = ?").get(itemId);
+
+    return row !== undefined;
+  };
+
+  hasInitializedXFeed = (): boolean => {
+    const row = this.prepare("SELECT initialized FROM x_feed_state WHERE id = 1").get() as
+      | { initialized: number }
+      | undefined;
+
+    return row?.initialized === 1;
+  };
+
+  markXFeedInitialized = (): void => {
+    this.prepare(`
+      INSERT INTO x_feed_state (id, initialized, updated_at)
+      VALUES (1, 1, ?)
+      ON CONFLICT (id) DO UPDATE SET initialized = 1, updated_at = excluded.updated_at
+    `).run(Date.now());
+  };
+
+  markXFeedItemSeen = (itemId: string): void => {
+    this.prepare("INSERT INTO x_feed_items (item_id, seen_at) VALUES (?, ?) ON CONFLICT DO NOTHING")
+      .run(itemId, Date.now());
+  };
+
+  getXFeedSchedule = (): string | undefined => {
+    const row = this.prepare("SELECT scheduled_time FROM x_feed_schedule WHERE id = 1").get() as
+      | { scheduled_time: string }
+      | undefined;
+
+    return row?.scheduled_time;
+  };
+
+  saveXFeedSchedule = (scheduledTime: string): void => {
+    this.prepare(`
+      INSERT INTO x_feed_schedule (id, scheduled_time, updated_at)
+      VALUES (1, ?, ?)
+      ON CONFLICT (id) DO UPDATE SET
+        scheduled_time = excluded.scheduled_time,
+        updated_at = excluded.updated_at
+    `).run(scheduledTime, Date.now());
+  };
+
   private prepare = (sql: string): StatementSync => {
     if (!this.database) {
       throw new Error("Database is not connected");
@@ -276,6 +321,26 @@ class DatabaseServiceClass {
           drawn_at INTEGER NOT NULL,
           vacated_at INTEGER NOT NULL,
           PRIMARY KEY (user_id)
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS x_feed_items (
+          item_id TEXT NOT NULL PRIMARY KEY,
+          seen_at INTEGER NOT NULL
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS x_feed_schedule (
+          id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+          scheduled_time TEXT NOT NULL,
+          updated_at INTEGER NOT NULL
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS x_feed_state (
+          id INTEGER NOT NULL PRIMARY KEY CHECK (id = 1),
+          initialized INTEGER NOT NULL CHECK (initialized IN (0, 1)),
+          updated_at INTEGER NOT NULL
         ) STRICT
       `);
 

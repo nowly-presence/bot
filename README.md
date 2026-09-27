@@ -23,6 +23,10 @@ Read once at startup by `src/config/env.ts`. Anything marked required throws at 
 | `DISCORD_SUPPORT_CHANNEL_ID` | no | `1516932454848401599` | Channel where the support ticket panel is posted |
 | `DISCORD_TICKET_CATEGORY_ID` | no | `1516932920361750781` | Category new ticket channels are created under |
 | `DISCORD_WELCOME_CHANNEL_ID` | no | none | Channel where welcome cards are posted. Welcome cards are disabled entirely when unset |
+| `DISCORD_X_FEED_CHANNEL_ID` | no | `1553582467234136114` | Channel where new posts from @nowlyme are published |
+| `X_RSS_FEED_URL` | no | none | Private RSS feed URL polled every 15 seconds; include `include_replies=false` to exclude replies |
+| `X_RSS_POLL_URL` | no | none | Private cache-refresh endpoint used by `/x clear` and the configured daily schedule |
+| `X_RSS_POLL_TOKEN` | no | none | Secret sent in the `X-RSS-Poll-Token` header; set it in the runtime environment, not in source control |
 | `DISCORD_DB_PATH` | no | `./.data/discord.sqlite` | SQLite file. Set to `/data/discord.sqlite` in Docker |
 | `DISCORD_AUTO_REGISTER_COMMANDS` | no | `true` | Registers slash commands on startup. Only the exact string `false` disables it |
 | `NOWLY_API_BASE_URL` | no | `https://api.nowly.me` | Nowly API base URL. `.env.example` points it at `http://localhost:3001` for local dev |
@@ -60,14 +64,19 @@ src/
     status/
     support/
     welcome/
-      <name>.builder.ts
-      <name>.command.ts
+    x/
+      x.builder.ts
+      [sub-commands]/
+        clear.command.ts
+        post.command.ts
+        schedule.command.ts
   data/
     welcome-cards.ts                # the 100 welcome cards and their rarities
   services/
     database.service.ts             # node:sqlite, persists welcome pulls
     ticket.service.ts
     welcome.service.ts              # draws and posts cards
+    x-feed.service.ts               # polls @nowlyme's RSS feed and handles scheduled cache refreshes
   utils/
     welcome.ts                      # pack bags, sequential draw, message rendering
     handler/
@@ -75,7 +84,9 @@ src/
       event/
 ```
 
-Commands are discovered by folder convention: each `commands/<name>` folder must contain `<name>.builder.ts` and `<name>.command.ts`.
+Commands are discovered by folder convention: each `commands/<name>` folder has a `<name>.builder.ts`; standalone commands also have a `<name>.command.ts`, while commands with subcommands put their handlers in `[sub-commands]/`.
+
+On the first successful RSS poll, all posts already present in the feed are recorded as seen without being sent. Later polls only publish unseen posts. `/x post` also records its post ID as seen, so regular feed polling will not send it twice.
 
 ## Commands
 
@@ -86,6 +97,9 @@ Commands are discovered by folder convention: each `commands/<name>` folder must
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 - `/send channel:<channel> [attachment:<file>] [color:<hex>] [embed:<true|false>]` - write a message as the bot through a modal, optionally attach a file, set an embed color, or send an embed. Embed mode adds an optional title input and displays an attached image inside the embed. Same permission as `/welcome`.
+- `/x clear` - force-refresh the feed cache through its protected poll endpoint, then immediately publish any new posts. Requires Manage Roles and `X_RSS_POLL_TOKEN`.
+- `/x post url:<url>` - manually publish a post from the tracked account and mark its ID as sent so feed polling will not duplicate it. Requires Manage Roles.
+- `/x schedule heure:<HH:MM>` - schedule a daily forced feed refresh at the selected Europe/Paris time. Requires Manage Roles. The schedule is stored in SQLite.
 - `/card` - show your own welcome card as an embed, with the pack and rarity it came from.
 
 ## Greetings
