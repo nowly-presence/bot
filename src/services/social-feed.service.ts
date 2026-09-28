@@ -278,9 +278,6 @@ class SocialFeedServiceClass {
     await sentMessage.react("1553762914954125453").catch((error) => {
       console.warn("Could not add the like reaction to the social post:", error);
     });
-    await sentMessage.react("1553763368622366873").catch((error) => {
-      console.warn("Could not add the repost reaction to the social post:", error);
-    });
     DatabaseService.markXFeedItemSeen(id);
   };
 
@@ -425,9 +422,6 @@ class SocialFeedServiceClass {
         const sentMessage = await channel.send({ content: message, allowedMentions: { parse: [] } });
         await sentMessage.react("1553762914954125453").catch((error) => {
           console.warn("Could not add the like reaction to the social post:", error);
-        });
-        await sentMessage.react("1553763368622366873").catch((error) => {
-          console.warn("Could not add the repost reaction to the social post:", error);
         });
         DatabaseService.markXFeedItemSeen(item.id);
       }
