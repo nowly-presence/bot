@@ -19,8 +19,8 @@ Read once at startup by `src/config/env.ts`. Anything marked required throws at 
 | `DISCORD_APPLICATION_ID` | yes | - | Validated at startup only: the bot refuses to boot without it, but no code reads it. Any non-empty value works |
 | `DISCORD_GUILD_ID` | yes | - | The only server the bot is allowed to stay in. `GuildGuardService` leaves every other guild, and the bot throws on startup if unset. Also scopes slash command registration to that guild instead of global |
 | `DISCORD_DONATOR_ROLE_ID` | no | `1517677191234715829` | Role claimed with a supporter key via `/donator` |
-| `DISCORD_MEMBER_ROLE_ID` | no | `1516939000605315212` | Role auto-added to new members on join |
-| `DISCORD_SUPPORT_CHANNEL_ID` | no | `1516932454848401599` | Channel where the support ticket panel is posted |
+| `DISCORD_MEMBER_ROLE_ID` | no | `1516939000605315212` | Role granted while a member has the verification reaction |
+| `DISCORD_VERIFY_MESSAGE_ID` | no | none | ID du message de vérification dans le salon `1555552153542725742`; la réaction ✅ attribue ou retire le rôle membre |
 | `DISCORD_TICKET_CATEGORY_ID` | no | `1516932920361750781` | Category new ticket channels are created under |
 | `DISCORD_WELCOME_CHANNEL_ID` | no | none | Channel where welcome cards are posted. Welcome cards are disabled entirely when unset |
 | `DISCORD_X_FEED_CHANNEL_ID` | no | `1553582467234136114` | Channel where new X posts are published |

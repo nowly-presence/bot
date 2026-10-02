@@ -2,7 +2,7 @@
 import "dotenv/config";
 import { env } from "@/config/env";
 import { loadEvents } from "@/utils/handler/event/event";
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, Partials } from "discord.js";
 import { sep } from "path";
 
 export const client = new Client({
@@ -10,8 +10,10 @@ export const client = new Client({
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions,
     GatewayIntentBits.MessageContent,
   ],
+  partials: [Partials.Channel, Partials.Message, Partials.Reaction, Partials.User],
 });
 
 client.setMaxListeners(20);

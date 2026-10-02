@@ -2,6 +2,7 @@ import { DatabaseService } from "@/services/database.service";
 import { GuildGuardService } from "@/services/guild-guard.service";
 import { TicketService } from "@/services/ticket.service";
 import { SocialFeedService } from "@/services/social-feed.service";
+import { VerifyService } from "@/services/verify.service";
 import { WelcomeService } from "@/services/welcome.service";
 import { load as loadCommands } from "@/utils/handler/command";
 import { listener, register } from "@/utils/handler/command/command";
@@ -40,6 +41,8 @@ const event: Event<Events.ClientReady> = {
     } catch (error) {
       console.error("Failed to ensure support ticket panel:", error);
     }
+
+    await VerifyService.getConfiguredMessage(client);
 
     client.user.setActivity("Nowly presences", {
       type: ActivityType.Watching,
