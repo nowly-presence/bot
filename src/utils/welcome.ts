@@ -292,7 +292,7 @@ export const renderWelcomeCard = (
   const message = renderWelcomeMessage(card.message, userId);
   const joined = joinedAt ? ` ${renderJoinedAgo(joinedAt)}` : "";
 
-  return `${getRarityEmoji(card.pack, card.rarity)} ${message}${joined}`;
+  return `${message}${joined}`;
 };
 
 // /card: the member's own card, the art and the colour of its pack and rarity.
@@ -310,6 +310,6 @@ export const buildCardEmbed = (options: {
     .setColor(getRarityColor(card.rarity))
     .setTitle(`${getRarityLabel(card.rarity)} card (${getPackLabel(card.pack)})`)
     .setImage(cardArtUrl(card))
-    .setDescription(`${emoji} ${renderWelcomeMessage(card.message, userId)}${joined}`)
+    .setDescription(`${renderWelcomeMessage(card.message, userId)}${joined}`)
     .setTimestamp(drawnAt);
 };
