@@ -94,13 +94,23 @@ class WelcomeServiceClass {
     const existing = DatabaseService.getWelcomePull(member.id);
 
     if (existing) {
+      if (source === "join") {
+        const card = getWelcomeCard(existing.pack, existing.cardId);
+
+        if (card) {
+          return this.post(member, card, undefined, { status: "posted", pull: existing });
+        }
+
+        return { status: "failed", pull: existing };
+      }
+
       return { status: "already_has_card", pull: existing };
     }
 
     const vacated = DatabaseService.getVacatedWelcomePull(member.id);
 
     if (vacated && !rarity) {
-      return this.restoreVacatedPull(member, vacated, source === "command", forcedJoinedAt);
+      return this.restoreVacatedPull(member, vacated, source !== "rejoin", forcedJoinedAt);
     }
 
     if (vacated) {
