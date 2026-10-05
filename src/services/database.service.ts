@@ -20,6 +20,20 @@ export type WelcomePull = {
   drawnAt: number;
 };
 
+export type TicketRating = 1 | 2 | 3 | 4 | 5;
+
+export type TicketRatingStats = {
+  total: number;
+  counts: Record<TicketRating, number>;
+  average: number | null;
+  positive: number;
+};
+
+export type TicketClosureStats = {
+  total: number;
+  averageDurationMs: number | null;
+};
+
 type WelcomePullRow = {
   user_id: string;
   card_id: number;
@@ -62,6 +76,65 @@ class DatabaseServiceClass {
 
   isConnected = (): boolean => {
     return this.database !== null;
+  };
+
+  insertTicketRating = (ticketId: string, userId: string, rating: TicketRating): boolean => {
+    const result = this.prepare(`
+      INSERT INTO ticket_ratings (ticket_id, user_id, rating, rated_at)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT (ticket_id) DO NOTHING
+    `).run(ticketId, userId, rating, Date.now());
+
+    return Number(result.changes) === 1;
+  };
+
+  getTicketRatingStats = (): TicketRatingStats => {
+    const rows = this.prepare(`
+      SELECT rating, COUNT(*) AS total
+      FROM ticket_ratings
+      GROUP BY rating
+    `).all() as { rating: TicketRating; total: number }[];
+    const counts: Record<TicketRating, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    let total = 0;
+    let scoreTotal = 0;
+    let positive = 0;
+
+    for (const row of rows) {
+      counts[row.rating] = row.total;
+      total += row.total;
+      scoreTotal += row.rating * row.total;
+
+      if (row.rating >= 3) {
+        positive += row.total;
+      }
+    }
+
+    return {
+      total,
+      counts,
+      average: total > 0 ? scoreTotal / total : null,
+      positive,
+    };
+  };
+
+  recordTicketClosure = (ticketId: string, openedAt: number, closedAt: number): void => {
+    this.prepare(`
+      INSERT INTO ticket_closures (ticket_id, opened_at, closed_at, duration_ms)
+      VALUES (?, ?, ?, ?)
+      ON CONFLICT (ticket_id) DO NOTHING
+    `).run(ticketId, openedAt, closedAt, Math.max(0, closedAt - openedAt));
+  };
+
+  getTicketClosureStats = (): TicketClosureStats => {
+    const row = this.prepare(`
+      SELECT COUNT(*) AS total, AVG(duration_ms) AS average_duration_ms
+      FROM ticket_closures
+    `).get() as { total: number; average_duration_ms: number | null };
+
+    return {
+      total: row.total,
+      averageDurationMs: row.average_duration_ms,
+    };
   };
 
   getWelcomePull = (userId: string): WelcomePull | undefined => {
@@ -357,6 +430,22 @@ class DatabaseServiceClass {
           social TEXT NOT NULL PRIMARY KEY CHECK (social IN ('x', 'bluesky')),
           initialized INTEGER NOT NULL CHECK (initialized IN (0, 1)),
           updated_at INTEGER NOT NULL
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS ticket_ratings (
+          ticket_id TEXT NOT NULL PRIMARY KEY,
+          user_id TEXT NOT NULL,
+          rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+          rated_at INTEGER NOT NULL
+        ) STRICT
+      `);
+      database.exec(`
+        CREATE TABLE IF NOT EXISTS ticket_closures (
+          ticket_id TEXT NOT NULL PRIMARY KEY,
+          opened_at INTEGER NOT NULL,
+          closed_at INTEGER NOT NULL,
+          duration_ms INTEGER NOT NULL CHECK (duration_ms >= 0)
         ) STRICT
       `);
 
