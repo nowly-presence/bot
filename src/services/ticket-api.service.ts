@@ -61,6 +61,25 @@ class TicketApiServiceClass {
     }
 
     const url = new URL(request.url ?? "/", "http://localhost");
+
+    if (url.pathname === "/") {
+      this.respondJson(response, 200, {
+        service: "Nowly Ticket Transcript API",
+        status: "ok",
+        transcript: "GET /api/tickets/<channel-id>.md",
+        authentication: "Authorization: Bearer <ticket-scoped-key>",
+      });
+      return;
+    }
+
+    if (url.pathname === "/healthz") {
+      this.respondJson(response, 200, {
+        service: "Nowly Ticket Transcript API",
+        status: "ok",
+      });
+      return;
+    }
+
     const match = url.pathname.match(/^\/api\/tickets\/(\d{17,20})\.md$/);
 
     if (!match) {
@@ -204,6 +223,15 @@ class TicketApiServiceClass {
       "X-Content-Type-Options": "nosniff",
     });
     response.end(message);
+  };
+
+  private respondJson = (response: ServerResponse, status: number, body: unknown): void => {
+    response.writeHead(status, {
+      "Cache-Control": "no-store",
+      "Content-Type": "application/json; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.end(JSON.stringify(body));
   };
 }
 
