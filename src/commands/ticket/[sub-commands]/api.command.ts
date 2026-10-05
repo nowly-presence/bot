@@ -45,8 +45,7 @@ export const execute: CommandExecute = async (command) => {
     return;
   }
 
-  const baseUrl = env.DISCORD_TICKET_API_PUBLIC_URL;
-  const endpoint = `${baseUrl}/api/tickets/${channel.id}.md`;
+  const endpoint = `${env.DISCORD_TICKET_API_PUBLIC_URL}/api/tickets/${channel.id}.md`;
   const accessKey = createTicketApiAccessKey(channel.id);
   const embed = createNowlyEmbed(
     "Ticket transcript API",

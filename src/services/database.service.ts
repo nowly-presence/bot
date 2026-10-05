@@ -34,6 +34,11 @@ export type TicketClosureStats = {
   averageDurationMs: number | null;
 };
 
+export type DeletedTicketData = {
+  ratings: number;
+  closures: number;
+};
+
 type WelcomePullRow = {
   user_id: string;
   card_id: number;
@@ -135,6 +140,29 @@ class DatabaseServiceClass {
       total: row.total,
       averageDurationMs: row.average_duration_ms,
     };
+  };
+
+  deleteTicketData = (ticketId: string): DeletedTicketData => {
+    if (!this.database) {
+      throw new Error("Database is not connected");
+    }
+
+    this.database.exec("BEGIN IMMEDIATE");
+
+    try {
+      const ratings = this.prepare("DELETE FROM ticket_ratings WHERE ticket_id = ?").run(ticketId);
+      const closures = this.prepare("DELETE FROM ticket_closures WHERE ticket_id = ?").run(ticketId);
+
+      this.database.exec("COMMIT");
+
+      return {
+        ratings: Number(ratings.changes),
+        closures: Number(closures.changes),
+      };
+    } catch (error) {
+      this.database.exec("ROLLBACK");
+      throw error;
+    }
   };
 
   getWelcomePull = (userId: string): WelcomePull | undefined => {

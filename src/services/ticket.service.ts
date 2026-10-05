@@ -21,7 +21,7 @@ import {
 const SUPPORT_CHANNEL_ID = env.DISCORD_SUPPORT_CHANNEL_ID;
 export const TICKET_CATEGORY_ID = env.DISCORD_TICKET_CATEGORY_ID;
 const TICKET_NUMBER_LENGTH = 4;
-const TICKET_CHANNEL_NUMBER_REGEX = /-(?:closed-)?ticket-(\d{4})$/;
+const TICKET_CHANNEL_NUMBER_REGEX = /-(?:closed-)?ticket-(\d{4,})$/;
 
 export const ticketComponentIds = {
   create: "ticket:create",
@@ -162,10 +162,16 @@ class TicketServiceClass {
     return topic.slice("ticket-owner:".length);
   };
 
+  isTicketChannel = (channel: TextChannel): boolean => {
+    return channel.parentId === TICKET_CATEGORY_ID && Boolean(
+      this.getTicketOwnerId(channel.topic) || channel.topic === "ticket-archived",
+    );
+  };
+
   isOpenTicket = (channel: TextChannel): boolean => {
     const ownerId = this.getTicketOwnerId(channel.topic);
 
-    if (!ownerId || channel.parentId !== TICKET_CATEGORY_ID) {
+    if (!ownerId || !this.isTicketChannel(channel)) {
       return false;
     }
 
@@ -175,6 +181,41 @@ class TicketServiceClass {
       userOverwrite?.allow.has(PermissionFlagsBits.ViewChannel) &&
         !userOverwrite.deny.has(PermissionFlagsBits.ViewChannel),
     );
+  };
+
+  archiveTicket = async (channel: TextChannel): Promise<void> => {
+    const ownerId = this.getTicketOwnerId(channel.topic);
+    const alreadyArchived = channel.topic === "ticket-archived";
+
+    if ((!ownerId && !alreadyArchived) || !this.isTicketChannel(channel)) {
+      throw new Error(`Channel ${channel.id} is not a ticket`);
+    }
+
+    if (ownerId) {
+      await channel.permissionOverwrites.edit(ownerId, {
+        ViewChannel: false,
+        SendMessages: false,
+      });
+    }
+
+    const archivedName = channel.name.replace(
+      /-(?:closed-)?ticket-(\d+)$/,
+      "-archived-$1",
+    ).slice(0, 100);
+
+    if (archivedName !== channel.name) {
+      await channel.setName(archivedName, "Ticket archived and removed from tracking");
+    }
+
+    await channel.setTopic("ticket-archived", "Ticket archived and removed from tracking");
+  };
+
+  deleteTicket = async (channel: TextChannel): Promise<void> => {
+    if (!this.isTicketChannel(channel)) {
+      throw new Error(`Channel ${channel.id} is not a ticket`);
+    }
+
+    await channel.delete("Ticket and related data removed by staff");
   };
 
   findOpenTicket = async (guild: Guild, userId: string): Promise<TextChannel | null> => {
@@ -242,7 +283,7 @@ class TicketServiceClass {
 
   private getNextTicketNumber = async (guild: Guild): Promise<number> => {
     const channels = await guild.channels.fetch();
-    let highest = 0;
+    const usedTicketNumbers = new Set<number>();
 
     channels.forEach((channel) => {
       if (!channel || channel.parentId !== TICKET_CATEGORY_ID) {
@@ -257,12 +298,18 @@ class TicketServiceClass {
 
       const number = Number(match[1]);
 
-      if (Number.isFinite(number) && number > highest) {
-        highest = number;
+      if (Number.isSafeInteger(number) && number > 0) {
+        usedTicketNumbers.add(number);
       }
     });
 
-    return highest + 1;
+    let nextTicketNumber = 1;
+
+    while (usedTicketNumbers.has(nextTicketNumber)) {
+      nextTicketNumber += 1;
+    }
+
+    return nextTicketNumber;
   };
 
   private sanitizeUsername = (username: string): string => {
@@ -280,11 +327,11 @@ class TicketServiceClass {
   };
 
   private getClosedTicketChannelName = (channelName: string): string => {
-    if (/-closed-ticket-\d{4}$/.test(channelName)) {
+    if (/-closed-ticket-\d{4,}$/.test(channelName)) {
       return channelName;
     }
 
-    const closedName = channelName.replace(/-ticket-(\d{4})$/, "-closed-ticket-$1");
+    const closedName = channelName.replace(/-ticket-(\d{4,})$/, "-closed-ticket-$1");
 
     return closedName.slice(0, 100);
   };

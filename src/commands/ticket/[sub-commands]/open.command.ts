@@ -8,7 +8,6 @@ export const execute: CommandExecute = async (command) => {
       content: "You need the Manage Channels permission to use this command.",
       flags: ["Ephemeral"],
     });
-
     return;
   }
 
@@ -17,21 +16,16 @@ export const execute: CommandExecute = async (command) => {
       content: "This command can only be used inside a server.",
       flags: ["Ephemeral"],
     });
-
     return;
   }
 
   const user = command.options.getUser("user", true);
-
   await command.deferReply({ flags: ["Ephemeral"] });
 
   const member = await command.guild.members.fetch(user.id).catch(() => null);
 
   if (!member) {
-    await command.editReply({
-      content: "That member could not be found in this server.",
-    });
-
+    await command.editReply({ content: "That member could not be found in this server." });
     return;
   }
 

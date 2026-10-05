@@ -24,7 +24,7 @@ Read once at startup by `src/config/env.ts`. Anything marked required throws at 
 | `DISCORD_TICKET_CATEGORY_ID` | no | `1516932920361750781` | Category new ticket channels are created under |
 | `DISCORD_TICKET_API_KEY` | no | none | Enables the authenticated open-ticket transcript API. Use a long random secret; the API stays disabled when unset |
 | `DISCORD_TICKET_API_PORT` | no | `8787` | Port where the ticket transcript API listens |
-| `DISCORD_TICKET_API_PUBLIC_URL` | no | none | Public base URL exposed by a reverse proxy, without a trailing slash; shown by `/ticket-api` |
+| `DISCORD_TICKET_API_PUBLIC_URL` | no | none | Public base URL exposed by a reverse proxy, without a trailing slash; shown by `/ticket api` |
 | `DISCORD_WELCOME_CHANNEL_ID` | no | none | Channel where welcome cards are posted. Welcome cards are disabled entirely when unset |
 | `DISCORD_X_FEED_CHANNEL_ID` | no | `1553582467234136114` | Channel where new X posts are published |
 | `DISCORD_BLUESKY_FEED_CHANNEL_ID` | no | none | Optional channel where new Bluesky posts are published |
@@ -64,8 +64,8 @@ src/
   commands/
     donator/
     links/
-    ticket-api/
-    ticket-stats/
+    ticket/
+      [sub-commands]/
     presence/
     status/
     support/
@@ -79,7 +79,7 @@ src/
   data/
     welcome-cards.ts                # the 100 welcome cards and their rarities
   services/
-    database.service.ts             # node:sqlite, persists welcome pulls and ticket ratings
+    database.service.ts             # node:sqlite, persists welcome pulls, ticket ratings and closures
     ticket-api.service.ts            # authenticated Markdown exports for open tickets
     ticket-feedback.service.ts       # ticket closure survey and review links
     ticket.service.ts
@@ -105,8 +105,10 @@ On the first successful poll for each configured social network, existing posts 
 - `/donator key:<NOWLY-XXXX-XXXX-XXXX>` - claim the Nowly donor role with a supporter key received by email
 - `/welcome user:<member> [rarity:<common|rare|epic|legendary|mythic|celestial>] [joined:<3d|2025-06-15>]` - post a welcome card to a member who joined before this feature existed. Requires the Manage Roles permission (bit 28, Discord's current name for the old `MANAGE_MEMBERS`).
 - `/send channel:<channel> [attachment:<file>] [color:<hex>] [embed:<true|false>]` - write a message as the bot through a modal, optionally attach a file, set an embed color, or send an embed. Embed mode adds an optional title input and displays an attached image inside the embed. Same permission as `/welcome`.
-- `/ticket-stats` - show support rating counts and percentages, the support score out of 5, normalized overall satisfaction, and average ticket resolution time. Requires Manage Channels.
-- `/ticket-api` - inside an open ticket, show its Markdown transcript endpoint and Bearer API key ephemerally. Requires Manage Channels.
+- `/ticket open user:<member> [description:<text>]` - open a ticket on behalf of a member. Requires Manage Channels.
+- `/ticket stats` - show support rating counts and percentages, the support score out of 5, normalized overall satisfaction, and average ticket resolution time. Requires Manage Channels.
+- `/ticket api` - inside an open ticket, show its Markdown transcript endpoint and Bearer API key ephemerally. Requires Manage Channels.
+- `/ticket delete channel:<channel> [keep:<true|false>]` - remove a ticket and its rating/resolution records. `keep` defaults to `false`; when `true`, archive the channel instead. Either way its ticket number becomes available for reuse. Requires Manage Channels.
 - `/social clear social:<x|bluesky>` - force-refresh the selected feed and publish any new posts. Requires Manage Roles and `X_RSS_POLL_TOKEN`.
 - `/social post social:<x|bluesky> url:<url>` - manually publish a post from the selected account. It is recorded to prevent automatic duplicates. Requires Manage Roles.
 - `/social schedule social:<x|bluesky> heure:<HH:MM>` - schedule a daily forced feed refresh at the selected Europe/Paris time. Requires Manage Roles. Schedules are stored in SQLite per network.
@@ -151,11 +153,15 @@ When the member has been in the server for more than an hour at that point, the 
 
 ## Ticket feedback and transcript API
 
-When a ticket is closed, the bot attempts to DM its owner a 1–5 support survey. Ratings are stored in SQLite once per ticket. Scores of 3 or higher also offer Chrome Web Store and Firefox Add-ons review links. Ticket closure times are recorded from channel creation to closure. `/ticket-stats` reports rating counts and shares, average support score out of 5, normalized overall satisfaction as a percentage, and the average time to close recorded tickets. Resolution-time statistics start with tickets closed after this feature is deployed.
+When a ticket is closed, the bot attempts to DM its owner a 1–5 support survey. Ratings are stored in SQLite once per ticket. Scores of 3 or higher also offer Chrome Web Store and Firefox Add-ons review links. Ticket closure times are recorded from channel creation to closure. `/ticket stats` reports rating counts and shares, average support score out of 5, normalized overall satisfaction as a percentage, and the average time to close recorded tickets. Resolution-time statistics start with tickets closed after this feature is deployed.
 
-The transcript API is disabled until `DISCORD_TICKET_API_KEY` is set. Generate a long random secret (for example, `openssl rand -hex 32`), expose port `8787` through the deployment's HTTPS reverse proxy, and set `DISCORD_TICKET_API_PUBLIC_URL` to its public base URL. `/ticket-api`, used inside an open ticket by staff with Manage Channels, returns the endpoint and a ticket-scoped API key ephemerally. Requests use `Authorization: Bearer <key>`; the key is deliberately not embedded in the URL and cannot be used to export other tickets.
+`/ticket delete` removes the channel (by default) and its stored rating and resolution records. Set `keep:true` to preserve the channel as an archive: the opener loses access, it is removed from active ticket tracking, and its name changes so the ticket number can be reused. New tickets take the lowest available number.
+
+The transcript API is disabled until `DISCORD_TICKET_API_KEY` is set. Generate a long random secret (for example, `openssl rand -hex 32`), expose port `8787` through the deployment's HTTPS reverse proxy, and set `DISCORD_TICKET_API_PUBLIC_URL` to its public base URL. `/ticket api`, used inside an open ticket by staff with Manage Channels, returns the endpoint and a ticket-scoped API key ephemerally. Requests use `Authorization: Bearer <key>`; the key is deliberately not embedded in the URL and cannot be used to export other tickets.
 
 `GET /api/tickets/<channel-id>.md` returns a downloadable Markdown transcript while the ticket is open. It includes every channel message in chronological order, timestamps, authors, embed text, and attachment/media URLs with available metadata. Closed tickets return 404. The ticket-scoped key grants access only to its matching transcript; rotate all keys by changing the environment secret.
+
+`GET /` returns API usage information, and `GET /healthz` is a public health check for reverse-proxy validation.
 
 ## Deployment
 
