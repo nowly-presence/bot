@@ -96,12 +96,7 @@ class TicketServiceClass {
         ButtonStyle.Danger,
         options.closeDisabled ?? false,
       ),
-      createButton(
-        ticketComponentIds.ai,
-        "Fix with AI",
-        ButtonStyle.Secondary,
-        options.aiDisabled ?? false,
-      ),
+      // createButton(ticketComponentIds.ai, "Fix with AI", ButtonStyle.Secondary, options.aiDisabled ?? false),
     );
   };
 
