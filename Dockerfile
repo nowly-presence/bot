@@ -26,6 +26,8 @@ RUN mkdir -p /data && chown -R node:node /data
 
 VOLUME /data
 
+EXPOSE 8787
+
 USER node
 
 CMD ["node", "-r", "@swc-node/register", "-r", "tsconfig-paths/register", "./src/client.ts"]

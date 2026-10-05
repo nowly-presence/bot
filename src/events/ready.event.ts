@@ -1,6 +1,7 @@
 import { DatabaseService } from "@/services/database.service";
 import { GuildGuardService } from "@/services/guild-guard.service";
 import { TicketService } from "@/services/ticket.service";
+import { TicketApiService } from "@/services/ticket-api.service";
 import { SocialFeedService } from "@/services/social-feed.service";
 import { VerifyService } from "@/services/verify.service";
 import { WelcomeService } from "@/services/welcome.service";
@@ -26,6 +27,8 @@ const event: Event<Events.ClientReady> = {
     } catch (error) {
       console.error("Failed to open the SQLite database, welcome cards are disabled:", error);
     }
+
+    TicketApiService.start(client);
 
     if (DatabaseService.isConnected()) {
       SocialFeedService.start(client);

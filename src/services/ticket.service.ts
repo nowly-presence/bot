@@ -162,6 +162,21 @@ class TicketServiceClass {
     return topic.slice("ticket-owner:".length);
   };
 
+  isOpenTicket = (channel: TextChannel): boolean => {
+    const ownerId = this.getTicketOwnerId(channel.topic);
+
+    if (!ownerId || channel.parentId !== TICKET_CATEGORY_ID) {
+      return false;
+    }
+
+    const userOverwrite = channel.permissionOverwrites.cache.get(ownerId);
+
+    return Boolean(
+      userOverwrite?.allow.has(PermissionFlagsBits.ViewChannel) &&
+        !userOverwrite.deny.has(PermissionFlagsBits.ViewChannel),
+    );
+  };
+
   findOpenTicket = async (guild: Guild, userId: string): Promise<TextChannel | null> => {
     const channels = await guild.channels.fetch();
 
@@ -169,20 +184,13 @@ class TicketServiceClass {
       if (
         !channel ||
         channel.type !== ChannelType.GuildText ||
-        channel.parentId !== TICKET_CATEGORY_ID ||
-        channel.topic !== `ticket-owner:${userId}`
+        channel.topic !== `ticket-owner:${userId}` ||
+        !this.isOpenTicket(channel)
       ) {
         continue;
       }
 
-      const userOverwrite = channel.permissionOverwrites.cache.get(userId);
-
-      if (
-        userOverwrite?.allow.has(PermissionFlagsBits.ViewChannel) &&
-        !userOverwrite.deny.has(PermissionFlagsBits.ViewChannel)
-      ) {
-        return channel;
-      }
+      return channel;
     }
 
     return null;

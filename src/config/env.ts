@@ -6,6 +6,9 @@ type Env = {
   DISCORD_MEMBER_ROLE_ID: string;
   DISCORD_SUPPORT_CHANNEL_ID: string;
   DISCORD_TICKET_CATEGORY_ID: string;
+  DISCORD_TICKET_API_KEY?: string;
+  DISCORD_TICKET_API_PORT: number;
+  DISCORD_TICKET_API_PUBLIC_URL?: string;
   DISCORD_WELCOME_CHANNEL_ID?: string;
   DISCORD_VERIFY_MESSAGE_ID?: string;
   DISCORD_X_FEED_CHANNEL_ID: string;
@@ -30,6 +33,12 @@ const required = (key: string): string => {
   return value;
 };
 
+const ticketApiPort = Number(process.env.DISCORD_TICKET_API_PORT ?? "8787");
+
+if (!Number.isInteger(ticketApiPort) || ticketApiPort < 1 || ticketApiPort > 65535) {
+  throw new Error("DISCORD_TICKET_API_PORT must be an integer between 1 and 65535");
+}
+
 export const env: Env = {
   DISCORD_BOT_TOKEN: required("DISCORD_BOT_TOKEN"),
   DISCORD_APPLICATION_ID: required("DISCORD_APPLICATION_ID"),
@@ -38,6 +47,10 @@ export const env: Env = {
   DISCORD_MEMBER_ROLE_ID: process.env.DISCORD_MEMBER_ROLE_ID ?? "1516939000605315212",
   DISCORD_SUPPORT_CHANNEL_ID: process.env.DISCORD_SUPPORT_CHANNEL_ID ?? "1516932454848401599",
   DISCORD_TICKET_CATEGORY_ID: process.env.DISCORD_TICKET_CATEGORY_ID ?? "1516932920361750781",
+  DISCORD_TICKET_API_KEY: process.env.DISCORD_TICKET_API_KEY,
+  DISCORD_TICKET_API_PORT: ticketApiPort,
+  DISCORD_TICKET_API_PUBLIC_URL:
+    process.env.DISCORD_TICKET_API_PUBLIC_URL?.trim().replace(/\/$/, "") || undefined,
   DISCORD_VERIFY_MESSAGE_ID: process.env.DISCORD_VERIFY_MESSAGE_ID,
   DISCORD_X_FEED_CHANNEL_ID: process.env.DISCORD_X_FEED_CHANNEL_ID ?? "1553582467234136114",
   SOCIAL_FEED_URL: process.env.SOCIAL_FEED_URL ?? process.env.X_RSS_FEED_URL,
