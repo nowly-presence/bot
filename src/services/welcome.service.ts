@@ -86,6 +86,7 @@ class WelcomeServiceClass {
     source: WelcomeSource,
     rarity?: WelcomeRarity,
     forcedJoinedAt?: number,
+    postCard = true,
   ): Promise<WelcomeGrantResult> => {
     if (!env.DISCORD_WELCOME_CHANNEL_ID || !DatabaseService.isConnected()) {
       return { status: "disabled" };
@@ -94,7 +95,7 @@ class WelcomeServiceClass {
     const existing = DatabaseService.getWelcomePull(member.id);
 
     if (existing) {
-      if (source === "join") {
+      if (source === "join" && postCard) {
         const card = getWelcomeCard(existing.pack, existing.cardId);
 
         if (card) {
@@ -110,7 +111,7 @@ class WelcomeServiceClass {
     const vacated = DatabaseService.getVacatedWelcomePull(member.id);
 
     if (vacated && !rarity) {
-      return this.restoreVacatedPull(member, vacated, source !== "rejoin", forcedJoinedAt);
+      return this.restoreVacatedPull(member, vacated, source !== "rejoin", forcedJoinedAt, postCard);
     }
 
     if (vacated) {
@@ -139,7 +140,7 @@ class WelcomeServiceClass {
       return conflict ? { status: "already_has_card", pull: conflict } : { status: "failed" };
     }
 
-    return this.post(member, card, forcedJoinedAt, { status: "posted", pull });
+    return postCard ? this.post(member, card, forcedJoinedAt, { status: "posted", pull }) : { status: "posted", pull };
   };
 
   // A member who left and came back gets their card back when nobody else drew
@@ -150,6 +151,7 @@ class WelcomeServiceClass {
     pull: WelcomePull,
     shouldPost: boolean,
     forcedJoinedAt?: number,
+    postCard = true,
   ): Promise<WelcomeGrantResult> => {
     const pack = claimCardFromPack(pull.pack, pull.cardId);
 
@@ -175,7 +177,7 @@ class WelcomeServiceClass {
 
     const card = getWelcomeCard(restored.pack, restored.cardId);
 
-    if (!card || !shouldPost) {
+    if (!card || !shouldPost || !postCard) {
       return { status: "restored", pull: restored };
     }
 
