@@ -163,6 +163,11 @@ The transcript API is disabled until `DISCORD_TICKET_API_KEY` is set. Generate a
 
 `GET /` returns API usage information, and `GET /healthz` is a public health check for reverse-proxy validation.
 
+## License
+
+The bot's source code is licensed under the MIT License. See [LICENSE](LICENSE).
+Third-party names, logos and content are not covered by this license.
+
 ## Deployment
 
 `Dockerfile` builds the bot for Dokploy. This repository is a standalone package, so the build context is the **repository root** (where `package.json` lives) with the Dockerfile path set to `Dockerfile`. The bot is not built from the `nowly` monorepo.
