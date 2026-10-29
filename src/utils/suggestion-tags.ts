@@ -1,6 +1,7 @@
 import { ApplicationCommandType, ContextMenuCommandBuilder, InteractionContextType, PermissionFlagsBits } from "discord.js";
 
 export const SUGGESTIONS_CHANNEL_ID = "1553417113077555240";
+export const TAGGABLE_FORUM_IDS = [SUGGESTIONS_CHANNEL_ID, "1565367540526350486"];
 export const SUGGESTION_TAGS_COMMAND = "Edit tags";
 export const SUGGESTION_TAGS_SELECT_PREFIX = "suggestion-tags:";
 

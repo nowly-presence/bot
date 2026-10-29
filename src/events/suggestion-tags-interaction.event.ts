@@ -1,5 +1,5 @@
 import { Event } from "@/utils/handler/event/event.type";
-import { SUGGESTIONS_CHANNEL_ID, SUGGESTION_TAGS_COMMAND, SUGGESTION_TAGS_SELECT_PREFIX } from "@/utils/suggestion-tags";
+import { TAGGABLE_FORUM_IDS, SUGGESTION_TAGS_COMMAND, SUGGESTION_TAGS_SELECT_PREFIX } from "@/utils/suggestion-tags";
 import { ActionRowBuilder, ChannelType, Events, PermissionFlagsBits, StringSelectMenuBuilder } from "discord.js";
 
 const event: Event<Events.InteractionCreate> = {
@@ -17,7 +17,7 @@ const event: Event<Events.InteractionCreate> = {
 
     try {
       if (!interaction.guild || !interaction.memberPermissions?.has(PermissionFlagsBits.ManageThreads)) {
-        await interaction.editReply("You need the Manage Threads permission to edit suggestion tags.");
+        await interaction.editReply("You need the Manage Threads permission to edit forum tags.");
         return;
       }
 
@@ -26,15 +26,15 @@ const event: Event<Events.InteractionCreate> = {
         : interaction.targetMessage.channelId;
       const thread = await interaction.guild.channels.fetch(threadId);
 
-      if (!thread?.isThread() || thread.parentId !== SUGGESTIONS_CHANNEL_ID) {
-        await interaction.editReply(`Use this action on a message inside a post in <#${SUGGESTIONS_CHANNEL_ID}>.`);
+      if (!thread?.isThread() || !thread.parentId || !TAGGABLE_FORUM_IDS.includes(thread.parentId)) {
+        await interaction.editReply(`Use this action on a message inside a post in ${TAGGABLE_FORUM_IDS.map((id) => `<#${id}>`).join(" or ")}.`);
         return;
       }
 
-      const forum = await interaction.guild.channels.fetch(SUGGESTIONS_CHANNEL_ID);
+      const forum = await interaction.guild.channels.fetch(thread.parentId);
 
       if (forum?.type !== ChannelType.GuildForum) {
-        await interaction.editReply("The suggestions forum is unavailable.");
+        await interaction.editReply("The forum is unavailable.");
         return;
       }
 
@@ -49,7 +49,7 @@ const event: Event<Events.InteractionCreate> = {
           return;
         }
 
-        await thread.setAppliedTags(interaction.values, `Suggestion tags updated by ${interaction.user.tag}`);
+        await thread.setAppliedTags(interaction.values, `Forum tags updated by ${interaction.user.tag}`);
         await interaction.editReply(`Tags updated for <#${thread.id}>.`);
         await interaction.message.edit({ components: [] });
         return;
@@ -62,7 +62,7 @@ const event: Event<Events.InteractionCreate> = {
 
       const select = new StringSelectMenuBuilder()
         .setCustomId(`${SUGGESTION_TAGS_SELECT_PREFIX}${thread.id}`)
-        .setPlaceholder("Select the tags for this suggestion")
+        .setPlaceholder("Select the tags for this post")
         .setMinValues(0)
         .setMaxValues(Math.min(5, forum.availableTags.length))
         .addOptions(forum.availableTags.map((tag) => ({
@@ -79,7 +79,7 @@ const event: Event<Events.InteractionCreate> = {
         components: [new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(select)],
       });
     } catch (error) {
-      console.error("Failed to edit suggestion tags:", error);
+      console.error("Failed to edit forum tags:", error);
       await interaction.editReply("Unable to edit the tags. Check that the bot has the Manage Threads permission and try again.");
     }
   },
