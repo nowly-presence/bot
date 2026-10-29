@@ -1,4 +1,5 @@
 import { env } from "@/config/env";
+import { suggestionTagsCommand } from "@/utils/suggestion-tags";
 import { Client, Collection, SlashCommandSubcommandBuilder, SlashCommandSubcommandGroupBuilder } from "discord.js";
 import { existsSync, readdirSync, statSync } from "fs";
 import { sep } from "path";
@@ -152,7 +153,10 @@ export const register = async (
     return;
   }
 
-  const allCommands = commandsBuilders.map((command) => command.toJSON());
+  const allCommands = [
+    ...commandsBuilders.map((command) => command.toJSON()),
+    suggestionTagsCommand.toJSON(),
+  ];
 
   if (env.DISCORD_GUILD_ID) {
     const guild = await client.guilds.fetch(env.DISCORD_GUILD_ID);
